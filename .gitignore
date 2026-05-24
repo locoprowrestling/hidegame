@@ -1,0 +1,23 @@
+# Claude Code — local-only settings (machine-specific, never commit)
+.claude/settings.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if ever added)
+node_modules/
+npm-debug.log*
+
+# Build output (if ever added)
+dist/
+build/
