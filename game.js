@@ -336,11 +336,11 @@ function gameLoop(timestamp) {
     if (gs.roundTimer <= 0) {
       // Win!
       gs.roundTimer = 0;
-      gs.score = Math.floor(gs.score);
       gs.score += gs.alliesAlive * SCORE_PER_ALLY;
       if (gs.alliesAlive === ALLY_COUNT) {
         gs.score += SCORE_FULL_SURVIVAL;
       }
+      gs.score  = Math.floor(gs.score);
       gs.screen = SCREEN_WIN;
     } else {
       updateScore(dt);
