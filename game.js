@@ -236,38 +236,42 @@ function checkScreenTransition(player) {
   var newY   = player.y;
   var crossed = false;
 
-  if (player.x + player.width < 0) {
+  var midTileCol = Math.floor((player.x + player.width  / 2) / TILE_SIZE);
+  var midTileRow = Math.floor((player.y + player.height / 2) / TILE_SIZE);
+
+  if (player.x <= 0 &&
+      player.room.isPassable(0, midTileRow)) {
     newCol--;
-    newX   = CANVAS_SIZE - player.width - 1;
+    newX    = CANVAS_SIZE - player.width - 1;
     crossed = true;
-  } else if (player.x > CANVAS_SIZE) {
+  } else if (player.x + player.width >= CANVAS_SIZE &&
+             player.room.isPassable(SCREEN_TILES - 1, midTileRow)) {
     newCol++;
-    newX   = 1;
+    newX    = 1;
     crossed = true;
-  } else if (player.y + player.height < 0) {
+  } else if (player.y <= 0 &&
+             player.room.isPassable(midTileCol, 0)) {
     newRow--;
-    newY   = CANVAS_SIZE - player.height - 1;
+    newY    = CANVAS_SIZE - player.height - 1;
     crossed = true;
-  } else if (player.y > CANVAS_SIZE) {
+  } else if (player.y + player.height >= CANVAS_SIZE &&
+             player.room.isPassable(midTileCol, SCREEN_TILES - 1)) {
     newRow++;
-    newY   = 1;
+    newY    = 1;
     crossed = true;
   }
 
   if (!crossed) return;
 
-  // Validate destination
   var destRoom = gs.grid.getRoom(newCol, newRow);
-  if (!destRoom) return; // hit world edge — stay put
+  if (!destRoom) return;
 
-  // Move player
   player.screenCol = newCol;
   player.screenRow = newRow;
   player.room      = destRoom;
   player.x         = newX;
   player.y         = newY;
 
-  // Carry chasing enemies to new screen
   for (var i = 0; i < gs.enemies.length; i++) {
     var en = gs.enemies[i];
     if (en.isChasing) {
