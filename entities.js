@@ -55,8 +55,8 @@ function Enemy(homeRoom, patrolPoints) {
   this.screenCol      = homeRoom.gridCol;
   this.screenRow      = homeRoom.gridRow;
 
-  // Start at first patrol point
-  var startPt         = patrolPoints[0];
+  // Start at first patrol point (fall back to tile [1,1] if array is empty)
+  var startPt         = patrolPoints[0] || [1, 1];
   this.x              = startPt[0] * TILE_SIZE;
   this.y              = startPt[1] * TILE_SIZE;
 
@@ -106,6 +106,8 @@ function Ally(spawnRoom, spawnPoint) {
 
 // ─── Entity distance helper (pixel space) ────────────────────────
 // Returns distance in pixels between two entities' centers
+// Note: uses entity center (x + width/2). HidingSpots use x + TILE_SIZE/2 as center
+// (a 1px difference). Do not pass HidingSpot directly — compute distance via tileCol/tileRow.
 function entityDist(a, b) {
   var ax = a.x + a.width  / 2;
   var ay = a.y + a.height / 2;
