@@ -15,8 +15,8 @@ function Room(roomData) {
   this.label       = roomData.label;
   this.gridCol     = roomData.gridCol;
   this.gridRow     = roomData.gridRow;
-  this.patrolPoints = roomData.enemyPatrolPoints;  // [[col,row],...]
-  this.spawnPoints  = roomData.allySpawnPoints;    // [[col,row],...]
+  this.patrolPoints = roomData.enemyPatrolPoints || [];  // [[col,row],...]
+  this.spawnPoints  = roomData.allySpawnPoints   || [];  // [[col,row],...]
 
   // Build 16×16 tile grid from flat string, skipping spaces/newlines
   var clean = roomData.tiles.replace(/[\s\n]/g, '');
@@ -69,7 +69,10 @@ function ScreenGrid(roomsArray) {
 
   for (var i = 0; i < roomsArray.length; i++) {
     var room = new Room(roomsArray[i]);
-    this.rooms[room.gridRow][room.gridCol] = room;
+    if (room.gridRow >= 0 && room.gridRow < GRID_SIZE &&
+        room.gridCol >= 0 && room.gridCol < GRID_SIZE) {
+      this.rooms[room.gridRow][room.gridCol] = room;
+    }
   }
 }
 
