@@ -37,7 +37,7 @@ Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited pa
 
 **Prompt:**
 ```
-Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited palette, chunky pixels, no gradients, no realistic lighting, no blur, no text, transparent background. Mini-map grid cell tile, active/visited state, dark navy fill with 1px lighter blue border, 16x16 pixels, hard pixel edges, flat colors, isolated on transparent background, PNG-ready. No gradients, no realistic lighting, no blur, no anime style, no text, no glossy effects.
+Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited palette, chunky pixels, no gradients, no realistic lighting, no blur, no text. Mini-map grid cell tile, active/visited state, dark navy solid fill with 1px lighter blue border, 16x16 pixels, hard pixel edges, flat colors, solid opaque background, PNG-ready. No gradients, no realistic lighting, no blur, no anime style, no text, no glossy effects.
 ```
 
 **AVOID:**
@@ -46,7 +46,7 @@ Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited pa
 - No glossy effects
 - No text
 
-**NOTES:** Output path: `Assets/ui/ui-minimap-cell-active.png`.
+**NOTES:** Output path: `Assets/ui/ui-minimap-cell-active.png`. This card has `Transparency: No` — the cell tile has a solid dark fill. Do not request a transparent background; the fill color is part of the asset.
 
 ---
 
@@ -59,7 +59,7 @@ Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited pa
 
 **Prompt:**
 ```
-Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited palette, chunky pixels, no gradients, no realistic lighting, no blur, no text, transparent background. Mini-map grid cell tile, inactive/unvisited state, very dark navy fill nearly black with barely visible 1px dark border, 16x16 pixels, hard pixel edges, flat colors, isolated on transparent background, PNG-ready. No gradients, no realistic lighting, no blur, no anime style, no text, no glossy effects.
+Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited palette, chunky pixels, no gradients, no realistic lighting, no blur, no text. Mini-map grid cell tile, inactive/unvisited state, very dark navy solid fill nearly black with barely visible 1px dark border, 16x16 pixels, hard pixel edges, flat colors, solid opaque background, PNG-ready. No gradients, no realistic lighting, no blur, no anime style, no text, no glossy effects.
 ```
 
 **AVOID:**
@@ -68,7 +68,7 @@ Top-down pixel-art game asset, 8-bit NES-inspired style, flat colors, limited pa
 - No glossy effects
 - No text
 
-**NOTES:** Output path: `Assets/ui/ui-minimap-cell-inactive.png`. Should be much darker than active state.
+**NOTES:** Output path: `Assets/ui/ui-minimap-cell-inactive.png`. Should be much darker than active state. This card has `Transparency: No` — the cell tile has a solid dark fill. Do not request a transparent background; the fill color is part of the asset.
 
 ---
 
