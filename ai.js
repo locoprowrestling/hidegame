@@ -180,19 +180,24 @@ function updateEnemyChasing(enemy, player, dt) {
       return;
     }
 
-    // Update last known
+    // Update last known (only when visible — intentional: hidden player is sensed
+    // within hideDetectRadius but enemy still moves toward last seen position, not
+    // exact hiding spot. This gives the player a chance to escape if well-hidden.)
     if (!player.isHidden) {
       enemy.lastKnownX = player.x + player.width  / 2;
       enemy.lastKnownY = player.y + player.height / 2;
     }
 
-    // Move toward player
-    moveToward(enemy, player.x + player.width / 2,
-                      player.y + player.height / 2, ENEMY_CHASE_SPEED);
+    // Move toward last known position (or current if visible)
+    var chaseX = player.isHidden ? enemy.lastKnownX : player.x + player.width  / 2;
+    var chaseY = player.isHidden ? enemy.lastKnownY : player.y + player.height / 2;
+    moveToward(enemy, chaseX, chaseY, ENEMY_CHASE_SPEED);
     enemy.isChasing = true;
   } else {
     // Player left the screen — give up after SEARCH_TIMEOUT
-    enemy.searchTimer = (enemy.searchTimer || SEARCH_TIMEOUT) - dt;
+    // Reset to full timeout on first frame off-screen to avoid stale timer values
+    if (enemy.searchTimer <= 0) enemy.searchTimer = SEARCH_TIMEOUT;
+    enemy.searchTimer -= dt;
     if (enemy.searchTimer <= 0) {
       enemy.isChasing = false;
       enemy.state     = STATE_RETURNING;
