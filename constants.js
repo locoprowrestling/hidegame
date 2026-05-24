@@ -21,12 +21,14 @@ var VISION_CONE_DEPTH   = 5;    // tiles
 
 // ─── Detection ────────────────────────────────────────────────
 var HIDE_DETECT_RADIUS  = 1.5;  // tiles — base, multiplied by wrestler.hideMult
+var HIDE_INTERACT_RADIUS = 1;    // tiles — player must be within this to press Space
 var ALLY_FLEE_RADIUS    = 6;    // tiles — enemy within this triggers ally flee
 
 // ─── Timing ───────────────────────────────────────────────────
 var SEARCH_TIMEOUT      = 3000; // ms before enemy gives up searching
 var ROUND_TIMER         = 90;   // seconds
-var ALERTED_FRAMES      = 2;    // frames enemy stays ALERTED before CHASING
+var TIMER_WARN_SECONDS  = 20;   // timer turns red below this threshold
+var ALERTED_FRAMES      = 30;   // frames enemy stays ALERTED before CHASING (~0.5s at 60fps)
 
 // ─── Entity counts ────────────────────────────────────────────
 var ENEMY_COUNT         = 4;
