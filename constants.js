@@ -75,6 +75,7 @@ var STATE_HIDING     = 'HIDING';
 var STATE_CAUGHT     = 'CAUGHT';
 
 // ─── Screen flow states ───────────────────────────────────────
+var SCREEN_LOADING   = 'LOADING';
 var SCREEN_TITLE     = 'TITLE';
 var SCREEN_SELECT    = 'CHARACTER_SELECT';
 var SCREEN_GAMEPLAY  = 'GAMEPLAY';

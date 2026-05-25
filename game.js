@@ -9,7 +9,7 @@ var RAW_ROOMS     = JSON.parse(document.getElementById('rooms-data').textContent
 
 // ─── GameState ────────────────────────────────────────────────────
 var gs = {
-  screen:         SCREEN_TITLE,
+  screen:         SCREEN_LOADING,
 
   // Character select state
   factionData:    RAW_WRESTLERS.factions,
@@ -333,7 +333,11 @@ function gameLoop(timestamp) {
   var dt = Math.min(timestamp - lastTime, 50); // cap at 50ms to avoid spiral
   lastTime = timestamp;
 
-  if (gs.screen === SCREEN_GAMEPLAY) {
+  if (gs.screen === SCREEN_LOADING) {
+    if (assetsReady()) {
+      gs.screen = SCREEN_TITLE;
+    }
+  } else if (gs.screen === SCREEN_GAMEPLAY) {
     // Tick timer
     gs.roundTimer -= dt;
 

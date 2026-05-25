@@ -3,6 +3,27 @@
 // Depends on: constants.js, world.js, entities.js, ai.js
 // ─────────────────────────────────────────────────────────────────
 
+// ─── Screen overlay helper ────────────────────────────────────────
+// Draws a full-screen overlay PNG letterboxed to canvas width.
+function drawScreenOverlay(ctx, img) {
+  ctx.fillStyle = COLOR_BLACK;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  if (!img || !img.complete || !img.naturalWidth) return;
+  var drawW = CANVAS_SIZE;
+  var drawH = Math.round(img.naturalHeight / img.naturalWidth * CANVAS_SIZE);
+  var drawY = Math.floor((CANVAS_SIZE - drawH) / 2);
+  ctx.drawImage(img, 0, drawY, drawW, drawH);
+}
+
+// imgReady — returns true if an Image element is fully loaded and usable
+function imgReady(img) {
+  return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+function drawLoadingScreen(ctx) {
+  drawScreenOverlay(ctx, ASSETS.screenLoading);
+}
+
 // ─── Tile layer ───────────────────────────────────────────────────
 function drawRoom(ctx, room) {
   for (var row = 0; row < SCREEN_TILES; row++) {
@@ -307,6 +328,10 @@ function render(ctx, gs) {
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
   switch (gs.screen) {
+    case SCREEN_LOADING:
+      drawLoadingScreen(ctx);
+      break;
+
     case SCREEN_TITLE:
       drawTitleScreen(ctx, gs.factionData);
       break;
