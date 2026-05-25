@@ -223,11 +223,9 @@ function drawAlly(ctx, ally) {
 }
 
 // ─── Mini-map ────────────────────────────────────────────────────
-// Drawn at top-left, 64×64 px.
-// gs: GameState — provides player, enemies, allies, currentScreen
 function drawMinimap(ctx, gs) {
-  var ox = 2; // offset from canvas edge
-  var oy = 14; // below HUD timer row
+  var ox = 2;
+  var oy = 14;
 
   // Background
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
@@ -238,8 +236,6 @@ function drawMinimap(ctx, gs) {
     for (var col = 0; col < GRID_SIZE; col++) {
       var cx = ox + col * MINIMAP_CELL;
       var cy = oy + row * MINIMAP_CELL;
-
-      // Active screen — bright border
       if (col === gs.player.screenCol && row === gs.player.screenRow) {
         ctx.strokeStyle = COLOR_WHITE;
         ctx.lineWidth   = 1;
@@ -252,49 +248,94 @@ function drawMinimap(ctx, gs) {
     }
   }
 
-  // Enemy dots — always red
+  // Enemy dots
   for (var i = 0; i < gs.enemies.length; i++) {
     var en = gs.enemies[i];
     var ex = ox + en.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2;
     var ey = oy + en.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2;
-    ctx.fillStyle = '#ff4444';
-    ctx.fillRect(ex - 1, ey - 1, 3, 3);
+    if (imgReady(ASSETS.dotEnemy)) {
+      ctx.drawImage(ASSETS.dotEnemy, ex - 2, ey - 2, 4, 4);
+    } else {
+      ctx.fillStyle = '#ff4444';
+      ctx.fillRect(ex - 1, ey - 1, 3, 3);
+    }
   }
 
-  // Ally dots — lighter faction color
+  // Ally dots
+  var allyDotKey = (gs.player.faction.name === 'The Rising') ? 'dotAllyRising' : 'dotAllyPillars';
   for (var j = 0; j < gs.allies.length; j++) {
     var al = gs.allies[j];
     if (al.state === STATE_CAUGHT) continue;
-    var ax = ox + al.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2 - 1;
-    var ay = oy + al.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2 - 1;
-    ctx.fillStyle = '#aaccee';
-    ctx.fillRect(ax, ay, 3, 3);
+    var ax = ox + al.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2;
+    var ay = oy + al.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2;
+    if (imgReady(ASSETS[allyDotKey])) {
+      ctx.drawImage(ASSETS[allyDotKey], ax - 1, ay - 1, 3, 3);
+    } else {
+      ctx.fillStyle = '#aaccee';
+      ctx.fillRect(ax - 1, ay - 1, 3, 3);
+    }
   }
 
-  // Player dot — faction color, 4×4
-  var px = ox + gs.player.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2 - 2;
-  var py = oy + gs.player.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2 - 2;
-  ctx.fillStyle = gs.player.faction.color;
-  ctx.fillRect(px, py, 4, 4);
+  // Player dot
+  var playerDotKey = (gs.player.faction.name === 'The Rising') ? 'dotPlayerRising' : 'dotPlayerPillars';
+  var px = ox + gs.player.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2;
+  var py = oy + gs.player.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2;
+  if (imgReady(ASSETS[playerDotKey])) {
+    ctx.drawImage(ASSETS[playerDotKey], px - 2, py - 2, 4, 4);
+  } else {
+    ctx.fillStyle = gs.player.faction.color;
+    ctx.fillRect(px - 2, py - 2, 4, 4);
+  }
+
+  // Minimap frame overlay (drawn last, on top of dots)
+  if (imgReady(ASSETS.minimapFrame)) {
+    ctx.drawImage(ASSETS.minimapFrame, ox, oy, MINIMAP_SIZE, MINIMAP_SIZE);
+  }
 }
 
 // ─── HUD ──────────────────────────────────────────────────────────
 function drawHUD(ctx, gs) {
+  var ICON_CELL   = 64;
+  var ICON_STRIDE = 66;
+
   // Top strip background
   ctx.fillStyle = COLOR_HUD_BG;
   ctx.fillRect(0, 0, CANVAS_SIZE, 12);
 
-  // Timer — turns red under 20s
+  // Timer icon (row 0, col 1)
+  if (imgReady(ASSETS.iconsSheet)) {
+    ctx.drawImage(ASSETS.iconsSheet, ICON_STRIDE, 0, ICON_CELL, ICON_CELL, 56, 1, 10, 10);
+  }
+
+  // Timer text
   var secLeft = Math.ceil(gs.roundTimer / 1000);
-  ctx.fillStyle = secLeft <= TIMER_WARN_SECONDS ? COLOR_TIMER_WARN : COLOR_WHITE;
+  ctx.fillStyle = (secLeft <= TIMER_WARN_SECONDS) ? COLOR_TIMER_WARN : COLOR_WHITE;
   ctx.font      = '6px "Press Start 2P"';
-  ctx.fillText(pad2(secLeft) + 's', 70, 9);
+  ctx.fillText(pad2(secLeft) + 's', 68, 9);
 
-  // Ally count (top-right area of HUD)
+  // Ally count icon (row 0, col 3)
+  if (imgReady(ASSETS.iconsSheet)) {
+    ctx.drawImage(ASSETS.iconsSheet, ICON_STRIDE * 3, 0, ICON_CELL, ICON_CELL, 130, 1, 10, 10);
+  }
+
+  // Ally count text
   ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('ALLIES:' + gs.alliesAlive, 130, 9);
+  ctx.fillText('x' + gs.alliesAlive, 142, 9);
 
-  // Bottom strip — room name
+  // Hidden indicator — flashes at 4Hz when player is hiding
+  if (gs.player.isHidden) {
+    var flashOn = Math.floor(Date.now() / 250) % 2 === 0;
+    if (flashOn) {
+      if (imgReady(ASSETS.iconHidden)) {
+        ctx.drawImage(ASSETS.iconHidden, CANVAS_SIZE - 14, 1, 10, 10);
+      } else {
+        ctx.fillStyle = '#44cc44';
+        ctx.fillRect(CANVAS_SIZE - 14, 1, 10, 10);
+      }
+    }
+  }
+
+  // Bottom strip — room label
   ctx.fillStyle = COLOR_HUD_BG;
   ctx.fillRect(0, CANVAS_SIZE - 12, CANVAS_SIZE, 12);
   ctx.fillStyle = COLOR_WHITE;
