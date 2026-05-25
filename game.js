@@ -201,9 +201,36 @@ function startGame() {
   gs.screen = SCREEN_GAMEPLAY;
 }
 
+// ─── Animation helpers ────────────────────────────────────────────
+// Maps facingAngle (radians, atan2 convention) to sprite sheet row:
+// 0=down, 1=left, 2=right, 3=up
+function angleToDir(angle) {
+  var PI4 = Math.PI / 4;
+  if (angle > -PI4   && angle <= PI4)      return 2; // right
+  if (angle > PI4    && angle <= 3 * PI4)  return 0; // down
+  if (angle > -3*PI4 && angle <= -PI4)     return 3; // up
+  return 1;                                           // left
+}
+
+// Advances animFrame when moving; snaps to frame 0 when still.
+function tickAnim(entity, dt, frameMs) {
+  entity.animDir = angleToDir(entity.facingAngle);
+  if (!entity.isMoving) {
+    entity.animFrame = 0;
+    entity.animTimer = frameMs;
+    return;
+  }
+  entity.animTimer -= dt;
+  if (entity.animTimer <= 0) {
+    entity.animFrame  = (entity.animFrame + 1) % WALK_FRAMES;
+    entity.animTimer += frameMs;
+  }
+}
+
 // ─── Player movement ──────────────────────────────────────────────
 function updatePlayer(dt) {
   var player = gs.player;
+  player.isMoving = false;
   if (player.isHidden) return; // movement locked while hiding
 
   var dx = 0;
@@ -215,6 +242,7 @@ function updatePlayer(dt) {
   if (gs.keys['ArrowDown']  || gs.keys['KeyS']) { dy += player.speed; }
 
   if (dx !== 0 || dy !== 0) {
+    player.isMoving = true;
     // Normalize diagonal movement
     if (dx !== 0 && dy !== 0) {
       dx *= 0.707;
@@ -318,6 +346,20 @@ function updateEntities(dt) {
     if (gs.allies[m].alive) alive++;
   }
   gs.alliesAlive = alive;
+
+  // Tick animations
+  tickAnim(gs.player, dt, ANIM_WALK_FRAME_MS);
+
+  for (var ei = 0; ei < gs.enemies.length; ei++) {
+    gs.enemies[ei].isMoving = true;
+    tickAnim(gs.enemies[ei], dt, ANIM_ENEMY_FRAME_MS);
+  }
+
+  for (var ali = 0; ali < gs.allies.length; ali++) {
+    var alEnt = gs.allies[ali];
+    alEnt.isMoving = (alEnt.state === STATE_WANDERING || alEnt.state === STATE_FLEEING);
+    tickAnim(alEnt, dt, ANIM_WALK_FRAME_MS);
+  }
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────
