@@ -39,8 +39,8 @@ loadImage('sheetFranky', 'Assets/players-web/spritesheets/franky.png');
 loadImage('sheetAlly',   'Assets/players-web/spritesheets/anuka.png');
 
 // ─── Enemy sprites ────────────────────────────────────────────────────
-loadImage('refereeSheet',  'Assets/sprites/wrestlers/referee-patrol-sheet.png');
-loadImage('securitySheet', 'Assets/sprites/wrestlers/security-patrol-sheet.png');
+loadImage('refereeIdle',  'Assets/sprites/wrestlers/referee-idle.png');
+loadImage('securityIdle', 'Assets/sprites/wrestlers/security-guard-idle.png');
 
 // ─── Tilesets ─────────────────────────────────────────────────────────
 loadImage('tileLockerRoom',    'Assets/bg_tiles/hide/locker-room-tileset.png');

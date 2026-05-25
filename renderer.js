@@ -3,29 +3,32 @@
 // Depends on: constants.js, world.js, entities.js, ai.js
 // ─────────────────────────────────────────────────────────────────
 
-// ─── Tileset cell dimensions ──────────────────────────────────────
-// Generated sheets: 1536px wide × 102px tall, 16 tiles per strip.
-var TILESET_CELL_W = 96;   // 1536 / 16
-var TILESET_CELL_H = 102;  // full sheet height (single row)
-
 // ─── Room → tileset + tile-index mapping ─────────────────────────
+// Each sheet is ~1568×1003px with 10 tiles in a single horizontal row.
+// Tile art is centered vertically; measurements are per-sheet (px):
+//   sx0   = x of first tile's art
+//   sy0   = y of top of tile art band
+//   sw/sh = width/height of each tile's art region
+//   stride = px from one tile's x start to the next
+// Tile indices (0-9, left→right): F=floor, W=wall, O=obstacle, H=hiding spot
 var ROOM_TILESETS = {
-  locker_room_tl:    { img: 'tileLockerRoom',    F: 4, W: 5, O: 2, H: 0 },
-  locker_room_tr:    { img: 'tileLockerRoom',    F: 4, W: 5, O: 2, H: 0 },
-  hallway_top_1:     { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
-  hallway_top_2:     { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
-  backstage_left:    { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
-  backstage_right:   { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
-  ringside_center_1: { img: 'tileWrestlingRing', F: 0, W: 4, O: 7, H: 5 },
-  ringside_center_2: { img: 'tileWrestlingRing', F: 0, W: 4, O: 7, H: 5 },
-  entrance_left:     { img: 'tileEntrance',      F: 2, W: 5, O: 6, H: 0 },
-  entrance_right:    { img: 'tileEntrance',      F: 2, W: 5, O: 6, H: 0 },
-  entrance_center_1: { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
-  entrance_center_2: { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
-  storage_bl:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
-  storage_bm_1:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
-  storage_bm_2:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
-  storage_br:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
+  //                                                            F  W  O  H   sx0  sy0  sw   sh   stride
+  locker_room_tl:    { img: 'tileLockerRoom',    F: 4, W: 9, O: 2, H: 0, sx0: 42, sy0: 436, sw: 128, sh: 127, stride: 146 },
+  locker_room_tr:    { img: 'tileLockerRoom',    F: 4, W: 9, O: 2, H: 0, sx0: 42, sy0: 436, sw: 128, sh: 127, stride: 146 },
+  hallway_top_1:     { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
+  hallway_top_2:     { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
+  backstage_left:    { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
+  backstage_right:   { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
+  ringside_center_1: { img: 'tileWrestlingRing', F: 4, W: 8, O: 6, H: 7, sx0: 45, sy0: 435, sw: 128, sh: 128, stride: 154 },
+  ringside_center_2: { img: 'tileWrestlingRing', F: 4, W: 8, O: 6, H: 7, sx0: 45, sy0: 435, sw: 128, sh: 128, stride: 154 },
+  entrance_left:     { img: 'tileEntrance',      F: 5, W: 2, O: 7, H: 0, sx0: 34, sy0: 436, sw: 128, sh: 138, stride: 153 },
+  entrance_right:    { img: 'tileEntrance',      F: 5, W: 2, O: 7, H: 0, sx0: 34, sy0: 436, sw: 128, sh: 138, stride: 153 },
+  entrance_center_1: { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
+  entrance_center_2: { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
+  storage_bl:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
+  storage_bm_1:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
+  storage_bm_2:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
+  storage_br:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
 };
 
 // ─── Screen overlay helper ────────────────────────────────────────
@@ -85,7 +88,7 @@ function drawRoom(ctx, room) {
         }
         ctx.drawImage(
           tileset,
-          idx * TILESET_CELL_W, 0, TILESET_CELL_W, TILESET_CELL_H,
+          config.sx0 + idx * config.stride, config.sy0, config.sw, config.sh,
           col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
         );
       } else {
@@ -182,14 +185,12 @@ function drawPlayer(ctx, player) {
 }
 
 function drawEnemy(ctx, enemy, index) {
-  var x     = enemy.x;
-  var y     = enemy.y;
-  var sheet = (index % 2 === 0) ? ASSETS.refereeSheet : ASSETS.securitySheet;
+  var x   = enemy.x;
+  var y   = enemy.y;
+  var img = (index % 2 === 0) ? ASSETS.refereeIdle : ASSETS.securityIdle;
 
-  if (imgReady(sheet)) {
-    var sx = enemy.animFrame * ENEMY_FRAME_W;
-    var sy = enemy.animDir   * ENEMY_FRAME_H;
-    ctx.drawImage(sheet, sx, sy, ENEMY_FRAME_W, ENEMY_FRAME_H, x, y, TILE_SIZE, TILE_SIZE);
+  if (imgReady(img)) {
+    ctx.drawImage(img, x, y, TILE_SIZE, TILE_SIZE);
   } else {
     ctx.fillStyle = '#cc0000';
     ctx.fillRect(x + 1, y + 1, enemy.width, enemy.height);
