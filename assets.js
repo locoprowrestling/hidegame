@@ -27,20 +27,16 @@ loadImage('screenFound',    'Assets/screens/screen-found-text.png');
 loadImage('screenVictory',  'Assets/screens/screen-victory-text.png');
 loadImage('screenSurvived', 'Assets/screens/screen-survived-text.png');
 
-// ─── Wrestler sprites ─────────────────────────────────────────────────
-loadImage('walkSheet',       'Assets/sprites/wrestlers/generic-walk-sheet.png');
-loadImage('idleSheet',       'Assets/sprites/wrestlers/generic-idle-sheet.png');
-loadImage('idleSingle',      'Assets/sprites/wrestlers/generic-idle.png');
-loadImage('hidingSprite',    'Assets/sprites/wrestlers/generic-hiding.png');
-loadImage('caughtSprite',    'Assets/sprites/wrestlers/generic-caught.png');
-loadImage('zeakIdle',        'Assets/sprites/wrestlers/zeak-idle.png');
-loadImage('erzaIdle',        'Assets/sprites/wrestlers/erza-idle.png');
-loadImage('johnnyCrashIdle', 'Assets/sprites/wrestlers/johnny-crash-idle.png');
-loadImage('carterCashIdle',  'Assets/sprites/wrestlers/carter-cash-idle.png');
-loadImage('jtStatenIdle',    'Assets/sprites/wrestlers/jt-staten-idle.png');
-loadImage('codyDevineIdle',  'Assets/sprites/wrestlers/cody-devine-idle.png');
-loadImage('nickyHydeIdle',   'Assets/sprites/wrestlers/nicky-hyde-idle.png');
-loadImage('frankyIdle',      'Assets/sprites/wrestlers/franky-idle.png');
+// ─── Player character spritesheets (real character art) ───────────────
+loadImage('sheetZeak',   'Assets/players-web/spritesheets/zeak.png');
+loadImage('sheetErza',   'Assets/players-web/spritesheets/erza.png');
+loadImage('sheetJohnny', 'Assets/players-web/spritesheets/crash.png');
+loadImage('sheetCarter', 'Assets/players-web/spritesheets/carter.png');
+loadImage('sheetJT',     'Assets/players-web/spritesheets/jt.png');
+loadImage('sheetCody',   'Assets/players-web/spritesheets/cody.png');
+loadImage('sheetNicky',  'Assets/players-web/spritesheets/nicky.png');
+loadImage('sheetFranky', 'Assets/players-web/spritesheets/franky.png');
+loadImage('sheetAlly',   'Assets/players-web/spritesheets/anuka.png');
 
 // ─── Enemy sprites ────────────────────────────────────────────────────
 loadImage('refereeSheet',  'Assets/sprites/wrestlers/referee-patrol-sheet.png');

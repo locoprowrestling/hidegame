@@ -213,8 +213,11 @@ function angleToDir(angle) {
 }
 
 // Advances animFrame when moving; snaps to frame 0 when still.
+// Updates facingRight when direction is left or right (persists through up/down).
 function tickAnim(entity, dt, frameMs) {
   entity.animDir = angleToDir(entity.facingAngle);
+  if (entity.animDir === 2) entity.facingRight = true;
+  if (entity.animDir === 1) entity.facingRight = false;
   if (!entity.isMoving) {
     entity.animFrame = 0;
     entity.animTimer = frameMs;

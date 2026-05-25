@@ -48,6 +48,7 @@ function Player(wrestler, faction, startRoom) {
   this.animFrame  = 0;
   this.animTimer  = 0;
   this.animDir    = 0;      // 0=down 1=left 2=right 3=up
+  this.facingRight = false; // used for sprite flip; persists through up/down movement
   this.isMoving   = false;
 }
 
@@ -113,10 +114,11 @@ function Ally(spawnRoom, spawnPoint) {
   this.facingAngle    = 0;
   this.alive          = true;
 
-  this.animFrame  = 0;
-  this.animTimer  = 0;
-  this.animDir    = 0;
-  this.isMoving   = false;
+  this.animFrame   = 0;
+  this.animTimer   = 0;
+  this.animDir     = 0;
+  this.facingRight = false;
+  this.isMoving    = false;
 }
 
 // ─── Entity distance helper (pixel space) ────────────────────────

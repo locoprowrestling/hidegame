@@ -45,17 +45,21 @@ function imgReady(img) {
   return !!(img && img.complete && img.naturalWidth > 0);
 }
 
-// Maps wrestler name to ASSETS key for named idle sprite
-var WRESTLER_IDLE_MAP = {
-  'Zeak':   'zeakIdle',
-  'Erza':   'erzaIdle',
-  'Johnny': 'johnnyCrashIdle',
-  'Carter': 'carterCashIdle',
-  'JT':     'jtStatenIdle',
-  'Cody':   'codyDevineIdle',
-  'Nicky':  'nickyHydeIdle',
-  'Franky': 'frankyIdle',
+// Per-character spritesheet metadata.
+// Each sheet is a single horizontal strip: 8 walk frames + jump + land = 10 total.
+// frameW is the width of one frame. All sheets are 96px tall.
+var PLAYER_SHEETS = {
+  'Zeak':   { key: 'sheetZeak',   frameW: 64 },
+  'Erza':   { key: 'sheetErza',   frameW: 64 },
+  'Johnny': { key: 'sheetJohnny', frameW: 62 },
+  'Carter': { key: 'sheetCarter', frameW: 76 },
+  'JT':     { key: 'sheetJT',     frameW: 66 },
+  'Cody':   { key: 'sheetCody',   frameW: 62 },
+  'Nicky':  { key: 'sheetNicky',  frameW: 72 },
+  'Franky': { key: 'sheetFranky', frameW: 64 },
 };
+var PLAYER_SHEET_DEFAULT = { key: 'sheetAlly', frameW: 58 };
+var PLAYER_SHEET_FRAME_H = 96;
 
 function drawLoadingScreen(ctx) {
   drawScreenOverlay(ctx, ASSETS.screenLoading);
@@ -133,6 +137,20 @@ function drawVisionCone(ctx, enemy) {
   ctx.fill();
 }
 
+// drawSpriteFrame — draws one frame from a horizontal strip, flipping H if needed
+function drawSpriteFrame(ctx, img, frameIdx, frameW, frameH, dx, dy, dw, dh, flipH) {
+  var sx = frameIdx * frameW;
+  if (flipH) {
+    ctx.save();
+    ctx.translate(dx + dw, dy);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, sx, 0, frameW, frameH, 0, 0, dw, dh);
+    ctx.restore();
+  } else {
+    ctx.drawImage(img, sx, 0, frameW, frameH, dx, dy, dw, dh);
+  }
+}
+
 // ─── Entity sprites ───────────────────────────────────────────────
 function drawPlayer(ctx, player) {
   var x = player.x;
@@ -140,34 +158,23 @@ function drawPlayer(ctx, player) {
   var w = TILE_SIZE;
   var h = TILE_SIZE;
 
+  var config = PLAYER_SHEETS[player.wrestler.name] || PLAYER_SHEET_DEFAULT;
+  var img    = ASSETS[config.key];
+
   if (player.isHidden) {
-    if (imgReady(ASSETS.hidingSprite)) {
-      ctx.globalAlpha = 0.7;
-      ctx.drawImage(ASSETS.hidingSprite, x, y, w, h);
-      ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 0.5;
+    if (imgReady(img)) {
+      drawSpriteFrame(ctx, img, 0, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, player.facingRight);
     } else {
-      ctx.globalAlpha = 0.4;
       ctx.fillStyle = player.faction.color;
       ctx.fillRect(x + 1, y + 1, player.width, player.height);
-      ctx.globalAlpha = 1.0;
     }
+    ctx.globalAlpha = 1.0;
     return;
   }
 
-  if (player.isMoving && imgReady(ASSETS.walkSheet)) {
-    var sx = player.animFrame * WALK_FRAME_W;
-    var sy = player.animDir   * WALK_FRAME_H;
-    ctx.drawImage(ASSETS.walkSheet, sx, sy, WALK_FRAME_W, WALK_FRAME_H, x, y, w, h);
-    return;
-  }
-
-  var idleKey = WRESTLER_IDLE_MAP[player.wrestler.name];
-  var idleImg = idleKey ? ASSETS[idleKey] : null;
-  if (imgReady(idleImg)) {
-    ctx.drawImage(idleImg, x, y, w, h);
-  } else if (imgReady(ASSETS.idleSheet)) {
-    var isx = player.animDir * IDLE_FRAME_W;
-    ctx.drawImage(ASSETS.idleSheet, isx, 0, IDLE_FRAME_W, IDLE_FRAME_H, x, y, w, h);
+  if (imgReady(img)) {
+    drawSpriteFrame(ctx, img, player.animFrame, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, player.facingRight);
   } else {
     ctx.fillStyle = player.faction.color;
     ctx.fillRect(x + 1, y + 1, player.width, player.height);
@@ -192,30 +199,25 @@ function drawEnemy(ctx, enemy, index) {
 function drawAlly(ctx, ally) {
   if (ally.state === STATE_CAUGHT) return;
 
-  var x = ally.x;
-  var y = ally.y;
+  var x   = ally.x;
+  var y   = ally.y;
+  var img = ASSETS[PLAYER_SHEET_DEFAULT.key];
+  var fw  = PLAYER_SHEET_DEFAULT.frameW;
 
   if (ally.state === STATE_HIDING) {
-    if (imgReady(ASSETS.hidingSprite)) {
-      ctx.globalAlpha = 0.6;
-      ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
-      ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 0.5;
+    if (imgReady(img)) {
+      drawSpriteFrame(ctx, img, 0, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, ally.facingRight);
     } else {
-      ctx.globalAlpha = 0.6;
       ctx.fillStyle = '#88aacc';
       ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
-      ctx.globalAlpha = 1.0;
     }
+    ctx.globalAlpha = 1.0;
     return;
   }
 
-  if (ally.isMoving && imgReady(ASSETS.walkSheet)) {
-    var sx = ally.animFrame * WALK_FRAME_W;
-    var sy = ally.animDir   * WALK_FRAME_H;
-    ctx.drawImage(ASSETS.walkSheet, sx, sy, WALK_FRAME_W, WALK_FRAME_H, x, y, TILE_SIZE, TILE_SIZE);
-  } else if (imgReady(ASSETS.idleSheet)) {
-    var isx = ally.animDir * IDLE_FRAME_W;
-    ctx.drawImage(ASSETS.idleSheet, isx, 0, IDLE_FRAME_W, IDLE_FRAME_H, x, y, TILE_SIZE, TILE_SIZE);
+  if (imgReady(img)) {
+    drawSpriteFrame(ctx, img, ally.animFrame, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, ally.facingRight);
   } else {
     ctx.fillStyle = '#88aacc';
     ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
@@ -369,10 +371,10 @@ function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
     ctx.drawImage(ASSETS[emblemKey], CANVAS_SIZE - 36, 16, 24, 24);
   }
 
-  var idleKey = WRESTLER_IDLE_MAP[wrestler.name];
-  var idleImg = idleKey ? ASSETS[idleKey] : ASSETS.idleSingle;
-  if (imgReady(idleImg)) {
-    ctx.drawImage(idleImg, CANVAS_SIZE - 58, 48, 48, 48);
+  var pConfig  = PLAYER_SHEETS[wrestler.name] || PLAYER_SHEET_DEFAULT;
+  var pImg     = ASSETS[pConfig.key];
+  if (imgReady(pImg)) {
+    drawSpriteFrame(ctx, pImg, 0, pConfig.frameW, PLAYER_SHEET_FRAME_H, CANVAS_SIZE - 58, 40, 48, 64, false);
   }
 
   ctx.font      = '6px "Press Start 2P"';
