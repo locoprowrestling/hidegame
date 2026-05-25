@@ -3,6 +3,31 @@
 // Depends on: constants.js, world.js, entities.js, ai.js
 // ─────────────────────────────────────────────────────────────────
 
+// ─── Tileset cell dimensions ──────────────────────────────────────
+// Generated sheets: 1536px wide × 102px tall, 16 tiles per strip.
+var TILESET_CELL_W = 96;   // 1536 / 16
+var TILESET_CELL_H = 102;  // full sheet height (single row)
+
+// ─── Room → tileset + tile-index mapping ─────────────────────────
+var ROOM_TILESETS = {
+  locker_room_tl:    { img: 'tileLockerRoom',    F: 4, W: 5, O: 2, H: 0 },
+  locker_room_tr:    { img: 'tileLockerRoom',    F: 4, W: 5, O: 2, H: 0 },
+  hallway_top_1:     { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
+  hallway_top_2:     { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
+  backstage_left:    { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
+  backstage_right:   { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
+  ringside_center_1: { img: 'tileWrestlingRing', F: 0, W: 4, O: 7, H: 5 },
+  ringside_center_2: { img: 'tileWrestlingRing', F: 0, W: 4, O: 7, H: 5 },
+  entrance_left:     { img: 'tileEntrance',      F: 2, W: 5, O: 6, H: 0 },
+  entrance_right:    { img: 'tileEntrance',      F: 2, W: 5, O: 6, H: 0 },
+  entrance_center_1: { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
+  entrance_center_2: { img: 'tileBackstage',     F: 0, W: 1, O: 2, H: 5 },
+  storage_bl:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
+  storage_bm_1:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
+  storage_bm_2:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
+  storage_br:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4 },
+};
+
 // ─── Screen overlay helper ────────────────────────────────────────
 // Draws a full-screen overlay PNG letterboxed to canvas width.
 function drawScreenOverlay(ctx, img) {
@@ -26,16 +51,36 @@ function drawLoadingScreen(ctx) {
 
 // ─── Tile layer ───────────────────────────────────────────────────
 function drawRoom(ctx, room) {
+  var config  = ROOM_TILESETS[room.id];
+  var tileset = config ? ASSETS[config.img] : null;
+  var useImg  = imgReady(tileset);
+
   for (var row = 0; row < SCREEN_TILES; row++) {
     for (var col = 0; col < SCREEN_TILES; col++) {
       var tile = room.getTile(col, row);
-      switch (tile) {
-        case TILE_WALL:     ctx.fillStyle = COLOR_WALL;     break;
-        case TILE_OBSTACLE: ctx.fillStyle = COLOR_OBSTACLE; break;
-        case TILE_HIDING:   ctx.fillStyle = COLOR_HIDING_SPOT; break;
-        default:            ctx.fillStyle = COLOR_FLOOR;    break;
+
+      if (useImg) {
+        var idx;
+        switch (tile) {
+          case TILE_WALL:     idx = config.W; break;
+          case TILE_OBSTACLE: idx = config.O; break;
+          case TILE_HIDING:   idx = config.H; break;
+          default:            idx = config.F; break;
+        }
+        ctx.drawImage(
+          tileset,
+          idx * TILESET_CELL_W, 0, TILESET_CELL_W, TILESET_CELL_H,
+          col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
+        );
+      } else {
+        switch (tile) {
+          case TILE_WALL:     ctx.fillStyle = COLOR_WALL;        break;
+          case TILE_OBSTACLE: ctx.fillStyle = COLOR_OBSTACLE;    break;
+          case TILE_HIDING:   ctx.fillStyle = COLOR_HIDING_SPOT; break;
+          default:            ctx.fillStyle = COLOR_FLOOR;       break;
+        }
+        ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
       }
-      ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
     }
   }
 }
