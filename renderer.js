@@ -45,6 +45,18 @@ function imgReady(img) {
   return !!(img && img.complete && img.naturalWidth > 0);
 }
 
+// Maps wrestler name to ASSETS key for named idle sprite
+var WRESTLER_IDLE_MAP = {
+  'Zeak':   'zeakIdle',
+  'Erza':   'erzaIdle',
+  'Johnny': 'johnnyCrashIdle',
+  'Carter': 'carterCashIdle',
+  'JT':     'jtStatenIdle',
+  'Cody':   'codyDevineIdle',
+  'Nicky':  'nickyHydeIdle',
+  'Franky': 'frankyIdle',
+};
+
 function drawLoadingScreen(ctx) {
   drawScreenOverlay(ctx, ASSETS.screenLoading);
 }
@@ -121,45 +133,93 @@ function drawVisionCone(ctx, enemy) {
   ctx.fill();
 }
 
-// ─── Entity rectangles ────────────────────────────────────────────
+// ─── Entity sprites ───────────────────────────────────────────────
 function drawPlayer(ctx, player) {
+  var x = player.x;
+  var y = player.y;
+  var w = TILE_SIZE;
+  var h = TILE_SIZE;
+
   if (player.isHidden) {
-    // Draw semi-transparent to indicate hiding
-    ctx.globalAlpha = 0.4;
+    if (imgReady(ASSETS.hidingSprite)) {
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(ASSETS.hidingSprite, x, y, w, h);
+      ctx.globalAlpha = 1.0;
+    } else {
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = player.faction.color;
+      ctx.fillRect(x + 1, y + 1, player.width, player.height);
+      ctx.globalAlpha = 1.0;
+    }
+    return;
   }
 
-  ctx.fillStyle = player.faction.color;
-  ctx.fillRect(player.x + 1, player.y + 1, player.width, player.height);
+  if (player.isMoving && imgReady(ASSETS.walkSheet)) {
+    var sx = player.animFrame * WALK_FRAME_W;
+    var sy = player.animDir   * WALK_FRAME_H;
+    ctx.drawImage(ASSETS.walkSheet, sx, sy, WALK_FRAME_W, WALK_FRAME_H, x, y, w, h);
+    return;
+  }
 
-  // Direction indicator — small triangle at facing edge
-  drawDirectionNub(ctx, player, COLOR_WHITE);
-
-  ctx.globalAlpha = 1.0;
+  var idleKey = WRESTLER_IDLE_MAP[player.wrestler.name];
+  var idleImg = idleKey ? ASSETS[idleKey] : null;
+  if (imgReady(idleImg)) {
+    ctx.drawImage(idleImg, x, y, w, h);
+  } else if (imgReady(ASSETS.idleSheet)) {
+    var isx = player.animDir * IDLE_FRAME_W;
+    ctx.drawImage(ASSETS.idleSheet, isx, 0, IDLE_FRAME_W, IDLE_FRAME_H, x, y, w, h);
+  } else {
+    ctx.fillStyle = player.faction.color;
+    ctx.fillRect(x + 1, y + 1, player.width, player.height);
+  }
 }
 
-function drawEnemy(ctx, enemy) {
-  // Only draw if on current screen (caller filters)
-  ctx.fillStyle = '#cc0000';
-  ctx.fillRect(enemy.x + 1, enemy.y + 1, enemy.width, enemy.height);
-  drawDirectionNub(ctx, enemy, '#ffcccc');
+function drawEnemy(ctx, enemy, index) {
+  var x     = enemy.x;
+  var y     = enemy.y;
+  var sheet = (index % 2 === 0) ? ASSETS.refereeSheet : ASSETS.securitySheet;
+
+  if (imgReady(sheet)) {
+    var sx = enemy.animFrame * ENEMY_FRAME_W;
+    var sy = enemy.animDir   * ENEMY_FRAME_H;
+    ctx.drawImage(sheet, sx, sy, ENEMY_FRAME_W, ENEMY_FRAME_H, x, y, TILE_SIZE, TILE_SIZE);
+  } else {
+    ctx.fillStyle = '#cc0000';
+    ctx.fillRect(x + 1, y + 1, enemy.width, enemy.height);
+  }
 }
 
 function drawAlly(ctx, ally) {
   if (ally.state === STATE_CAUGHT) return;
-  ctx.fillStyle = '#88aacc';
-  ctx.fillRect(ally.x + 1, ally.y + 1, ally.width, ally.height);
-  drawDirectionNub(ctx, ally, COLOR_WHITE);
-}
 
-// drawDirectionNub — 4×4 square offset from center in facingAngle direction
-function drawDirectionNub(ctx, entity, color) {
-  var cx = entity.x + entity.width  / 2;
-  var cy = entity.y + entity.height / 2;
-  var offset = 5;
-  var nx = cx + Math.cos(entity.facingAngle) * offset - 2;
-  var ny = cy + Math.sin(entity.facingAngle) * offset - 2;
-  ctx.fillStyle = color;
-  ctx.fillRect(nx, ny, 4, 4);
+  var x = ally.x;
+  var y = ally.y;
+
+  if (ally.state === STATE_HIDING) {
+    if (imgReady(ASSETS.hidingSprite)) {
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
+      ctx.globalAlpha = 1.0;
+    } else {
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = '#88aacc';
+      ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
+      ctx.globalAlpha = 1.0;
+    }
+    return;
+  }
+
+  if (ally.isMoving && imgReady(ASSETS.walkSheet)) {
+    var sx = ally.animFrame * WALK_FRAME_W;
+    var sy = ally.animDir   * WALK_FRAME_H;
+    ctx.drawImage(ASSETS.walkSheet, sx, sy, WALK_FRAME_W, WALK_FRAME_H, x, y, TILE_SIZE, TILE_SIZE);
+  } else if (imgReady(ASSETS.idleSheet)) {
+    var isx = ally.animDir * IDLE_FRAME_W;
+    ctx.drawImage(ASSETS.idleSheet, isx, 0, IDLE_FRAME_W, IDLE_FRAME_H, x, y, TILE_SIZE, TILE_SIZE);
+  } else {
+    ctx.fillStyle = '#88aacc';
+    ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
+  }
 }
 
 // ─── Mini-map ────────────────────────────────────────────────────
@@ -431,7 +491,7 @@ function renderGameplay(ctx, gs) {
     var e2 = gs.enemies[k];
     if (e2.screenCol === gs.player.screenCol &&
         e2.screenRow === gs.player.screenRow) {
-      drawEnemy(ctx, e2);
+      drawEnemy(ctx, e2, k);
     }
   }
 
