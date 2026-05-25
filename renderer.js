@@ -308,66 +308,52 @@ function pad2(n) {
 }
 
 // ─── Screen overlays ─────────────────────────────────────────────
-function drawTitleScreen(ctx, factionData) {
-  ctx.fillStyle = COLOR_BLACK;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-  // Rising accent bar
-  ctx.fillStyle = COLOR_RISING;
-  ctx.fillRect(0, 60, CANVAS_SIZE, 3);
-
-  // Pillars accent bar
-  ctx.fillStyle = COLOR_PILLARS;
-  ctx.fillRect(0, 64, CANVAS_SIZE, 3);
-
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.font      = '8px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('LoCo Pro', CANVAS_SIZE / 2, 40);
-  ctx.fillText('Wrestling', CANVAS_SIZE / 2, 52);
-
-  ctx.font      = '12px "Press Start 2P"';
-  ctx.fillStyle = '#ffdd00';
-  ctx.fillText('HIDE', CANVAS_SIZE / 2, 80);
-
+function drawTitleScreen(ctx) {
+  drawScreenOverlay(ctx, ASSETS.screenTitle);
   ctx.font      = '5px "Press Start 2P"';
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('PRESS ENTER TO START', CANVAS_SIZE / 2, 110);
-
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, CANVAS_SIZE - 16);
   ctx.textAlign = 'left';
 }
 
 function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
-  ctx.fillStyle = COLOR_BLACK;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  drawScreenOverlay(ctx, ASSETS.screenSelect);
 
   var faction  = factions[selFactionIdx];
-  ctx.fillStyle = faction.color;
-  ctx.fillRect(0, 0, CANVAS_SIZE, 2);
-  ctx.fillRect(0, CANVAS_SIZE - 2, CANVAS_SIZE, 2);
+  var wrestler = faction.wrestlers[selWrestlerIdx];
+
+  var emblemKey = (faction.name === 'The Rising') ? 'emblemRising' : 'emblemPillars';
+  if (imgReady(ASSETS[emblemKey])) {
+    ctx.drawImage(ASSETS[emblemKey], CANVAS_SIZE - 36, 16, 24, 24);
+  }
+
+  var idleKey = WRESTLER_IDLE_MAP[wrestler.name];
+  var idleImg = idleKey ? ASSETS[idleKey] : ASSETS.idleSingle;
+  if (imgReady(idleImg)) {
+    ctx.drawImage(idleImg, CANVAS_SIZE - 58, 48, 48, 48);
+  }
 
   ctx.font      = '6px "Press Start 2P"';
   ctx.textAlign = 'center';
   ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2, 20);
+  ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2 - 20, 20);
 
-  ctx.font      = '5px "Press Start 2P"';
+  ctx.font = '5px "Press Start 2P"';
   for (var i = 0; i < faction.wrestlers.length; i++) {
     var wr = faction.wrestlers[i];
-    var y  = 40 + i * 20;
-    ctx.fillStyle = i === selWrestlerIdx ? faction.color : '#888888';
-    ctx.fillText((i === selWrestlerIdx ? '> ' : '  ') + wr.name, CANVAS_SIZE / 2, y);
-
+    var y  = 44 + i * 20;
+    ctx.fillStyle = (i === selWrestlerIdx) ? faction.color : '#888888';
+    ctx.fillText((i === selWrestlerIdx ? '> ' : '  ') + wr.name, CANVAS_SIZE / 2 - 20, y);
     if (i === selWrestlerIdx) {
-      // Stat bars
-      drawStatBar(ctx, 'SPD', wr.speedMult, 60, y + 8);
-      drawStatBar(ctx, 'HID', wr.hideMult,  140, y + 8);
+      drawStatBar(ctx, 'SPD', wr.speedMult, 20, y + 8);
+      drawStatBar(ctx, 'HID', wr.hideMult, 100, y + 8);
     }
   }
 
-  ctx.fillStyle = '#888888';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.font      = '4px "Press Start 2P"';
-  ctx.fillText('L/R:FACTION  U/D:PICK  ENTER:GO', CANVAS_SIZE / 2, CANVAS_SIZE - 10);
+  ctx.fillText('L/R:FACTION  U/D:PICK  ENTER:GO', CANVAS_SIZE / 2 - 20, CANVAS_SIZE - 10);
   ctx.textAlign = 'left';
 }
 
@@ -384,45 +370,33 @@ function drawStatBar(ctx, label, value, x, y) {
 }
 
 function drawWinScreen(ctx, gs) {
-  ctx.fillStyle = COLOR_BLACK;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-  ctx.font      = '10px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffdd00';
-  ctx.fillText('YOU WIN!', CANVAS_SIZE / 2, 60);
+  var img = (gs.alliesAlive === ALLY_COUNT) ? ASSETS.screenVictory : ASSETS.screenSurvived;
+  drawScreenOverlay(ctx, img);
 
   ctx.font      = '5px "Press Start 2P"';
+  ctx.textAlign = 'center';
   ctx.fillStyle = COLOR_WHITE;
-  var secSurvived = Math.floor((ROUND_TIMER * 1000 - gs.roundTimer) / 1000);
-  ctx.fillText('SURVIVED: ' + secSurvived + 's', CANVAS_SIZE / 2, 90);
-  ctx.fillText('ALLIES SAVED: ' + gs.alliesAlive, CANVAS_SIZE / 2, 105);
-  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE / 2, 120);
-
+  ctx.fillText('ALLIES SAVED: ' + gs.alliesAlive + '/' + ALLY_COUNT, CANVAS_SIZE / 2, 196);
+  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE / 2, 210);
   ctx.font      = '4px "Press Start 2P"';
   ctx.fillStyle = '#888888';
-  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, 145);
+  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, 228);
   ctx.textAlign = 'left';
 }
 
 function drawGameOverScreen(ctx, gs) {
-  ctx.fillStyle = '#1a0000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  var img = (gs.alliesAlive > 0) ? ASSETS.screenFound : ASSETS.screenGameover;
+  drawScreenOverlay(ctx, img);
 
-  ctx.font      = '10px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = COLOR_TIMER_WARN;
-  ctx.fillText('CAUGHT!', CANVAS_SIZE / 2, 60);
-
-  ctx.font      = '5px "Press Start 2P"';
-  ctx.fillStyle = COLOR_WHITE;
   var secSurvived = Math.floor((ROUND_TIMER * 1000 - gs.roundTimer) / 1000);
-  ctx.fillText('SURVIVED: ' + secSurvived + 's', CANVAS_SIZE / 2, 90);
-  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE / 2, 105);
-
+  ctx.font      = '5px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COLOR_WHITE;
+  ctx.fillText('SURVIVED: ' + secSurvived + 's', CANVAS_SIZE / 2, 196);
+  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE / 2, 210);
   ctx.font      = '4px "Press Start 2P"';
   ctx.fillStyle = '#888888';
-  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, 130);
+  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, 228);
   ctx.textAlign = 'left';
 }
 
@@ -438,7 +412,7 @@ function render(ctx, gs) {
       break;
 
     case SCREEN_TITLE:
-      drawTitleScreen(ctx, gs.factionData);
+      drawTitleScreen(ctx);
       break;
 
     case SCREEN_SELECT:
