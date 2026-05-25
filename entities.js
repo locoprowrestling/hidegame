@@ -44,6 +44,11 @@ function Player(wrestler, faction, startRoom) {
 
   this.facingAngle = 0;     // radians, 0 = right
   this.alive       = true;
+
+  this.animFrame  = 0;
+  this.animTimer  = 0;
+  this.animDir    = 0;      // 0=down 1=left 2=right 3=up
+  this.isMoving   = false;
 }
 
 // ─── Enemy ────────────────────────────────────────────────────────
@@ -77,6 +82,11 @@ function Enemy(homeRoom, patrolPoints) {
 
   this.searchTimer    = 0;           // ms remaining in SEARCHING/RETURNING timeout
   this.isChasing      = false;       // true while following player across screens
+
+  this.animFrame  = 0;
+  this.animTimer  = 0;
+  this.animDir    = 0;
+  this.isMoving   = true;            // enemies are always moving
 }
 
 // ─── Ally ─────────────────────────────────────────────────────────
@@ -102,6 +112,11 @@ function Ally(spawnRoom, spawnPoint) {
 
   this.facingAngle    = 0;
   this.alive          = true;
+
+  this.animFrame  = 0;
+  this.animTimer  = 0;
+  this.animDir    = 0;
+  this.isMoving   = false;
 }
 
 // ─── Entity distance helper (pixel space) ────────────────────────

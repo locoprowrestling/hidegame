@@ -30,6 +30,17 @@ var ROUND_TIMER         = 90;   // seconds
 var TIMER_WARN_SECONDS  = 20;   // timer turns red below this threshold
 var ALERTED_FRAMES      = 30;   // frames enemy stays ALERTED before CHASING (~0.5s at 60fps)
 
+// ─── Animation ────────────────────────────────────────────────
+var ANIM_WALK_FRAME_MS  = 150;  // ms per player/ally walk frame
+var ANIM_ENEMY_FRAME_MS = 200;  // ms per enemy patrol frame
+var WALK_FRAMES         = 3;    // frames per direction in walk sheet
+var WALK_FRAME_W        = 107;  // px — floor(323/3)
+var WALK_FRAME_H        = 80;   // px — floor(323/4)
+var ENEMY_FRAME_W       = 81;   // px — floor(244/3)
+var ENEMY_FRAME_H       = 81;   // px — floor(326/4)
+var IDLE_FRAME_W        = 97;   // px — floor(390/4)
+var IDLE_FRAME_H        = 96;   // px — full idle sheet height
+
 // ─── Entity counts ────────────────────────────────────────────
 var ENEMY_COUNT         = 4;
 var ALLY_COUNT          = 3;
