@@ -387,6 +387,7 @@ function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
   for (var i = 0; i < faction.wrestlers.length; i++) {
     var wr = faction.wrestlers[i];
     var y  = 44 + i * 20;
+    ctx.textAlign = 'center';
     ctx.fillStyle = (i === selWrestlerIdx) ? faction.color : '#888888';
     ctx.fillText((i === selWrestlerIdx ? '> ' : '  ') + wr.name, CANVAS_SIZE / 2 - 20, y);
     if (i === selWrestlerIdx) {
