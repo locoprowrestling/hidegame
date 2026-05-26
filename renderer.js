@@ -26,20 +26,13 @@ function _drawImgOrRect(ctx, src, x, y, w, h, color) {
 
 // ─── Room ────────────────────────────────────────────────────────
 function drawRoom(ctx, room) {
-  // Background
-  _drawImgOrRect(ctx, room.bgTileset, 0, 0, CANVAS_SIZE, CANVAS_SIZE, room.bgColor);
-
-  // Static props (decorative; drawn over tileset)
-  // Only draw if tileset NOT loaded (avoid double-drawing on clean tilesets)
-  var img = room.bgTileset ? _loadImg(room.bgTileset) : null;
-  var tilesetLoaded = img && img.complete && img.naturalWidth > 0;
-  if (!tilesetLoaded) {
-    var props = room.staticProps;
-    for (var i = 0; i < props.length; i++) {
-      var p = props[i];
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x, p.y, p.w, p.h);
-    }
+  ctx.fillStyle = room.bgColor;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  var props = room.staticProps;
+  for (var i = 0; i < props.length; i++) {
+    var p = props[i];
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, p.w, p.h);
   }
 }
 
@@ -190,13 +183,14 @@ function drawMiniMap(ctx, gs) {
 function drawTitle(ctx, gs) {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  _drawImgOrRect(ctx, 'Assets/screens/screen-title-no-text.png', 0, 0, CANVAS_SIZE, CANVAS_SIZE, '#000000');
   ctx.fillStyle = '#ffffff';
   ctx.font = '10px "Press Start 2P"';
   ctx.textAlign = 'center';
   ctx.fillText('HIDE', CANVAS_SIZE/2, 80);
   ctx.font = '5px "Press Start 2P"';
-  ctx.fillStyle = '#888888';
-  ctx.fillText('A top-down disguise game', CANVAS_SIZE/2, 100);
+  ctx.fillStyle = '#aaaaaa';
+  ctx.fillText('A disguise game', CANVAS_SIZE/2, 100);
   var blink = Math.floor(Date.now() / 500) % 2 === 0;
   if (blink) {
     ctx.fillStyle = '#ffffff';
@@ -295,9 +289,9 @@ function drawGameplay(ctx, gs) {
 }
 
 function drawWin(ctx, gs) {
-  drawRoom(ctx, gs.room);
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  _drawImgOrRect(ctx, 'Assets/screens/screen-survived-no-text.png', 0, 0, CANVAS_SIZE, CANVAS_SIZE, '#000000');
   ctx.fillStyle = '#44ff44';
   ctx.font = '8px "Press Start 2P"';
   ctx.textAlign = 'center';
@@ -311,9 +305,9 @@ function drawWin(ctx, gs) {
 }
 
 function drawGameOver(ctx, gs) {
-  drawRoom(ctx, gs.room);
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  _drawImgOrRect(ctx, 'Assets/screens/screen-found-no-text.png', 0, 0, CANVAS_SIZE, CANVAS_SIZE, '#000000');
   ctx.fillStyle = '#ff2222';
   ctx.font = '8px "Press Start 2P"';
   ctx.textAlign = 'center';
