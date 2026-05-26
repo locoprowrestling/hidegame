@@ -49,20 +49,32 @@ function imgReady(img) {
 }
 
 // Per-character spritesheet metadata.
-// Each sheet is a single horizontal strip: frame 0 idle, frames 1-8 walk.
+// Each sheet is a single horizontal strip. The original 9-frame sheets use
+// frame 0 idle, frames 1-8 walk; the newer 10-frame TAS sheets use frames
+// 0-7 as the active walk cycle and include extra non-walk poses at the end.
 // The regenerated sheets face right; drawSpriteFrame flips them for left-facing movement.
 var PLAYER_SHEETS = {
-  'Zeak':   { key: 'sheetZeak',   frameW: 64 },
-  'Erza':   { key: 'sheetErza',   frameW: 64 },
-  'Johnny': { key: 'sheetJohnny', frameW: 64 },
-  'Carter': { key: 'sheetCarter', frameW: 64 },
-  'JT':     { key: 'sheetJT',     frameW: 64 },
-  'Cody':   { key: 'sheetCody',   frameW: 64 },
-  'Nicky':  { key: 'sheetNicky',  frameW: 64 },
-  'Franky': { key: 'sheetFranky', frameW: 64 },
+  'Anuka':     { key: 'sheetAnuka',     frameCount: 10, walkStart: 0 },
+  'Avalon':    { key: 'sheetAvalon',    frameCount: 10, walkStart: 0 },
+  'Carter':    { key: 'sheetCarter',    frameCount: 9,  walkStart: 1 },
+  'Codah':     { key: 'sheetCodah',     frameCount: 10, walkStart: 0 },
+  'Cody':      { key: 'sheetCody',      frameCount: 9,  walkStart: 1 },
+  'Dean':      { key: 'sheetDean',      frameCount: 10, walkStart: 0 },
+  'Erza':      { key: 'sheetErza',      frameCount: 9,  walkStart: 1 },
+  'Franky':    { key: 'sheetFranky',    frameCount: 9,  walkStart: 1 },
+  'Glory':     { key: 'sheetGlory',     frameCount: 10, walkStart: 0 },
+  'Hussy':     { key: 'sheetHussy',     frameCount: 10, walkStart: 0 },
+  'Johnny':    { key: 'sheetJohnny',    frameCount: 9,  walkStart: 1 },
+  'JT':        { key: 'sheetJT',        frameCount: 9,  walkStart: 1 },
+  'Morgana':   { key: 'sheetMorgana',   frameCount: 10, walkStart: 0 },
+  'Nicky':     { key: 'sheetNicky',     frameCount: 9,  walkStart: 1 },
+  'Vigilante': { key: 'sheetVigilante', frameCount: 10, walkStart: 0 },
+  'Zeak':      { key: 'sheetZeak',      frameCount: 9,  walkStart: 1 },
 };
-var PLAYER_SHEET_DEFAULT = { key: 'genericWalk', frameW: 64 };
+var PLAYER_SHEET_DEFAULT = { key: 'genericWalk', frameCount: 9, walkStart: 1 };
 var PLAYER_SHEET_FRAME_H = 96;
+var CHARACTER_SPRITE_W = 28;
+var CHARACTER_SPRITE_H = 42;
 
 function drawLoadingScreen(ctx) {
   drawScreenOverlay(ctx, ASSETS.screenLoading);
@@ -140,17 +152,34 @@ function drawVisionCone(ctx, enemy) {
   ctx.fill();
 }
 
+function getSheetFrameBounds(img, config, frameIdx) {
+  var frameCount = config.frameCount || 9;
+  var safeIdx = Math.max(0, Math.min(frameIdx, frameCount - 1));
+  var sx = Math.round(img.naturalWidth * safeIdx / frameCount);
+  var nextX = Math.round(img.naturalWidth * (safeIdx + 1) / frameCount);
+  return { sx: sx, sw: Math.max(1, nextX - sx) };
+}
+
+function getEntitySpriteRect(entity, drawW, drawH) {
+  return {
+    x: Math.round(entity.x + TILE_SIZE / 2 - drawW / 2),
+    y: Math.round(entity.y + TILE_SIZE - drawH),
+    w: drawW,
+    h: drawH
+  };
+}
+
 // drawSpriteFrame — draws one frame from a horizontal strip, flipping H if needed
-function drawSpriteFrame(ctx, img, frameIdx, frameW, frameH, dx, dy, dw, dh, flipH) {
-  var sx = frameIdx * frameW;
+function drawSpriteFrame(ctx, img, config, frameIdx, frameH, dx, dy, dw, dh, flipH) {
+  var frame = getSheetFrameBounds(img, config, frameIdx);
   if (flipH) {
     ctx.save();
     ctx.translate(dx + dw, dy);
     ctx.scale(-1, 1);
-    ctx.drawImage(img, sx, 0, frameW, frameH, 0, 0, dw, dh);
+    ctx.drawImage(img, frame.sx, 0, frame.sw, frameH, 0, 0, dw, dh);
     ctx.restore();
   } else {
-    ctx.drawImage(img, sx, 0, frameW, frameH, dx, dy, dw, dh);
+    ctx.drawImage(img, frame.sx, 0, frame.sw, frameH, dx, dy, dw, dh);
   }
 }
 
@@ -158,8 +187,7 @@ function drawSpriteFrame(ctx, img, frameIdx, frameW, frameH, dx, dy, dw, dh, fli
 function drawPlayer(ctx, player) {
   var x = player.x;
   var y = player.y;
-  var w = TILE_SIZE;
-  var h = TILE_SIZE;
+  var sprite = getEntitySpriteRect(player, CHARACTER_SPRITE_W, CHARACTER_SPRITE_H);
 
   var config = PLAYER_SHEETS[player.wrestler.name] || PLAYER_SHEET_DEFAULT;
   var img    = ASSETS[config.key];
@@ -167,9 +195,9 @@ function drawPlayer(ctx, player) {
   if (player.isHidden) {
     ctx.globalAlpha = 0.7;
     if (imgReady(ASSETS.hidingSprite)) {
-      ctx.drawImage(ASSETS.hidingSprite, x, y, w, h);
+      ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
     } else if (imgReady(img)) {
-      drawSpriteFrame(ctx, img, 0, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, !player.facingRight);
+      drawSpriteFrame(ctx, img, config, 0, PLAYER_SHEET_FRAME_H, sprite.x, sprite.y, sprite.w, sprite.h, !player.facingRight);
     } else {
       ctx.fillStyle = player.faction.color;
       ctx.fillRect(x + 1, y + 1, player.width, player.height);
@@ -179,10 +207,10 @@ function drawPlayer(ctx, player) {
   }
 
   if (!player.isMoving && config === PLAYER_SHEET_DEFAULT && imgReady(ASSETS.genericIdle)) {
-    ctx.drawImage(ASSETS.genericIdle, x, y, w, h);
+    ctx.drawImage(ASSETS.genericIdle, sprite.x, sprite.y, sprite.w, sprite.h);
   } else if (imgReady(img)) {
-    var frameIdx = player.isMoving ? player.animFrame + 1 : 0;
-    drawSpriteFrame(ctx, img, frameIdx, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, !player.facingRight);
+    var frameIdx = player.isMoving ? config.walkStart + player.animFrame : 0;
+    drawSpriteFrame(ctx, img, config, frameIdx, PLAYER_SHEET_FRAME_H, sprite.x, sprite.y, sprite.w, sprite.h, !player.facingRight);
   } else {
     ctx.fillStyle = player.faction.color;
     ctx.fillRect(x + 1, y + 1, player.width, player.height);
@@ -193,9 +221,10 @@ function drawEnemy(ctx, enemy, index) {
   var x   = enemy.x;
   var y   = enemy.y;
   var img = (index % 2 === 0) ? ASSETS.refereeIdle : ASSETS.securityIdle;
+  var sprite = getEntitySpriteRect(enemy, CHARACTER_SPRITE_W, CHARACTER_SPRITE_H);
 
   if (imgReady(img)) {
-    ctx.drawImage(img, x, y, TILE_SIZE, TILE_SIZE);
+    ctx.drawImage(img, sprite.x, sprite.y, sprite.w, sprite.h);
   } else {
     ctx.fillStyle = '#cc0000';
     ctx.fillRect(x + 1, y + 1, enemy.width, enemy.height);
@@ -206,11 +235,12 @@ function drawAlly(ctx, ally) {
   var x   = ally.x;
   var y   = ally.y;
   var img = ASSETS.genericWalk;
-  var fw  = PLAYER_SHEET_DEFAULT.frameW;
+  var config = PLAYER_SHEET_DEFAULT;
+  var sprite = getEntitySpriteRect(ally, CHARACTER_SPRITE_W, CHARACTER_SPRITE_H);
 
   if (ally.state === STATE_CAUGHT) {
     if (imgReady(ASSETS.caughtSprite)) {
-      ctx.drawImage(ASSETS.caughtSprite, x, y, TILE_SIZE, TILE_SIZE);
+      ctx.drawImage(ASSETS.caughtSprite, sprite.x, sprite.y, sprite.w, sprite.h);
     }
     return;
   }
@@ -220,7 +250,7 @@ function drawAlly(ctx, ally) {
     if (imgReady(ASSETS.hidingSprite)) {
       ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
     } else if (imgReady(img)) {
-      drawSpriteFrame(ctx, img, 0, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, !ally.facingRight);
+      drawSpriteFrame(ctx, img, config, 0, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, !ally.facingRight);
     } else {
       ctx.fillStyle = '#88aacc';
       ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
@@ -230,10 +260,10 @@ function drawAlly(ctx, ally) {
   }
 
   if (!ally.isMoving && imgReady(ASSETS.genericIdle)) {
-    ctx.drawImage(ASSETS.genericIdle, x, y, TILE_SIZE, TILE_SIZE);
+    ctx.drawImage(ASSETS.genericIdle, sprite.x, sprite.y, sprite.w, sprite.h);
   } else if (imgReady(img)) {
     var frameIdx = ally.isMoving ? ally.animFrame + 1 : 0;
-    drawSpriteFrame(ctx, img, frameIdx, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, !ally.facingRight);
+    drawSpriteFrame(ctx, img, config, frameIdx, PLAYER_SHEET_FRAME_H, sprite.x, sprite.y, sprite.w, sprite.h, !ally.facingRight);
   } else {
     ctx.fillStyle = '#88aacc';
     ctx.fillRect(x + 1, y + 1, ally.width, ally.height);

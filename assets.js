@@ -28,14 +28,22 @@ loadImage('screenVictory',  'Assets/screens/screen-victory-text.png');
 loadImage('screenSurvived', 'Assets/screens/screen-survived-text.png');
 
 // ─── Player character spritesheets (real character art) ───────────────
+loadImage('sheetAnuka',  'Assets/players-web/spritesheets/anuka.png');
+loadImage('sheetAvalon', 'Assets/players-web/spritesheets/avalon.png');
 loadImage('sheetZeak',   'Assets/players-web/spritesheets/zeak.png');
 loadImage('sheetErza',   'Assets/players-web/spritesheets/erza.png');
 loadImage('sheetJohnny', 'Assets/players-web/spritesheets/crash.png');
 loadImage('sheetCarter', 'Assets/players-web/spritesheets/carter.png');
+loadImage('sheetCodah',  'Assets/players-web/spritesheets/codah.png');
 loadImage('sheetJT',     'Assets/players-web/spritesheets/jt.png');
 loadImage('sheetCody',   'Assets/players-web/spritesheets/cody.png');
+loadImage('sheetDean',   'Assets/players-web/spritesheets/dean.png');
+loadImage('sheetGlory',  'Assets/players-web/spritesheets/glory.png');
+loadImage('sheetHussy',  'Assets/players-web/spritesheets/hussy.png');
+loadImage('sheetMorgana','Assets/players-web/spritesheets/morgana.png');
 loadImage('sheetNicky',  'Assets/players-web/spritesheets/nicky.png');
 loadImage('sheetFranky', 'Assets/players-web/spritesheets/franky.png');
+loadImage('sheetVigilante','Assets/players-web/spritesheets/vigilante.png');
 loadImage('sheetAlly',   'Assets/players-web/spritesheets/anuka.png');
 
 // ─── Character select portraits (TAS images) ─────────────────────
