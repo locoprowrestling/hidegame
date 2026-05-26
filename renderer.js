@@ -49,19 +49,19 @@ function imgReady(img) {
 }
 
 // Per-character spritesheet metadata.
-// Each sheet is a single horizontal strip: 8 walk frames + jump + land = 10 total.
-// frameW is the width of one frame. All sheets are 96px tall.
+// Each sheet is a single horizontal strip: frame 0 idle, frames 1-8 walk.
+// The regenerated sheets face right; drawSpriteFrame flips them for left-facing movement.
 var PLAYER_SHEETS = {
   'Zeak':   { key: 'sheetZeak',   frameW: 64 },
   'Erza':   { key: 'sheetErza',   frameW: 64 },
-  'Johnny': { key: 'sheetJohnny', frameW: 62 },
-  'Carter': { key: 'sheetCarter', frameW: 76 },
-  'JT':     { key: 'sheetJT',     frameW: 66 },
-  'Cody':   { key: 'sheetCody',   frameW: 62 },
-  'Nicky':  { key: 'sheetNicky',  frameW: 72 },
+  'Johnny': { key: 'sheetJohnny', frameW: 64 },
+  'Carter': { key: 'sheetCarter', frameW: 64 },
+  'JT':     { key: 'sheetJT',     frameW: 64 },
+  'Cody':   { key: 'sheetCody',   frameW: 64 },
+  'Nicky':  { key: 'sheetNicky',  frameW: 64 },
   'Franky': { key: 'sheetFranky', frameW: 64 },
 };
-var PLAYER_SHEET_DEFAULT = { key: 'sheetAlly', frameW: 58 };
+var PLAYER_SHEET_DEFAULT = { key: 'genericWalk', frameW: 64 };
 var PLAYER_SHEET_FRAME_H = 96;
 
 function drawLoadingScreen(ctx) {
@@ -165,9 +165,11 @@ function drawPlayer(ctx, player) {
   var img    = ASSETS[config.key];
 
   if (player.isHidden) {
-    ctx.globalAlpha = 0.5;
-    if (imgReady(img)) {
-      drawSpriteFrame(ctx, img, 0, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, player.facingRight);
+    ctx.globalAlpha = 0.7;
+    if (imgReady(ASSETS.hidingSprite)) {
+      ctx.drawImage(ASSETS.hidingSprite, x, y, w, h);
+    } else if (imgReady(img)) {
+      drawSpriteFrame(ctx, img, 0, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, !player.facingRight);
     } else {
       ctx.fillStyle = player.faction.color;
       ctx.fillRect(x + 1, y + 1, player.width, player.height);
@@ -176,8 +178,11 @@ function drawPlayer(ctx, player) {
     return;
   }
 
-  if (imgReady(img)) {
-    drawSpriteFrame(ctx, img, player.animFrame, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, player.facingRight);
+  if (!player.isMoving && config === PLAYER_SHEET_DEFAULT && imgReady(ASSETS.genericIdle)) {
+    ctx.drawImage(ASSETS.genericIdle, x, y, w, h);
+  } else if (imgReady(img)) {
+    var frameIdx = player.isMoving ? player.animFrame + 1 : 0;
+    drawSpriteFrame(ctx, img, frameIdx, config.frameW, PLAYER_SHEET_FRAME_H, x, y, w, h, !player.facingRight);
   } else {
     ctx.fillStyle = player.faction.color;
     ctx.fillRect(x + 1, y + 1, player.width, player.height);
@@ -198,17 +203,24 @@ function drawEnemy(ctx, enemy, index) {
 }
 
 function drawAlly(ctx, ally) {
-  if (ally.state === STATE_CAUGHT) return;
-
   var x   = ally.x;
   var y   = ally.y;
-  var img = ASSETS[PLAYER_SHEET_DEFAULT.key];
+  var img = ASSETS.genericWalk;
   var fw  = PLAYER_SHEET_DEFAULT.frameW;
+
+  if (ally.state === STATE_CAUGHT) {
+    if (imgReady(ASSETS.caughtSprite)) {
+      ctx.drawImage(ASSETS.caughtSprite, x, y, TILE_SIZE, TILE_SIZE);
+    }
+    return;
+  }
 
   if (ally.state === STATE_HIDING) {
     ctx.globalAlpha = 0.5;
-    if (imgReady(img)) {
-      drawSpriteFrame(ctx, img, 0, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, ally.facingRight);
+    if (imgReady(ASSETS.hidingSprite)) {
+      ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
+    } else if (imgReady(img)) {
+      drawSpriteFrame(ctx, img, 0, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, !ally.facingRight);
     } else {
       ctx.fillStyle = '#88aacc';
       ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
@@ -217,8 +229,11 @@ function drawAlly(ctx, ally) {
     return;
   }
 
-  if (imgReady(img)) {
-    drawSpriteFrame(ctx, img, ally.animFrame, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, ally.facingRight);
+  if (!ally.isMoving && imgReady(ASSETS.genericIdle)) {
+    ctx.drawImage(ASSETS.genericIdle, x, y, TILE_SIZE, TILE_SIZE);
+  } else if (imgReady(img)) {
+    var frameIdx = ally.isMoving ? ally.animFrame + 1 : 0;
+    drawSpriteFrame(ctx, img, frameIdx, fw, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, !ally.facingRight);
   } else {
     ctx.fillStyle = '#88aacc';
     ctx.fillRect(x + 1, y + 1, ally.width, ally.height);

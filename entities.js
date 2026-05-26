@@ -48,7 +48,7 @@ function Player(wrestler, faction, startRoom) {
   this.animFrame  = 0;
   this.animTimer  = 0;
   this.animDir    = 0;      // 0=down 1=left 2=right 3=up
-  this.facingRight = false; // used for sprite flip; persists through up/down movement
+  this.facingRight = true;  // regenerated sheets face right; flip only for left
   this.isMoving   = false;
 }
 
@@ -117,7 +117,7 @@ function Ally(spawnRoom, spawnPoint) {
   this.animFrame   = 0;
   this.animTimer   = 0;
   this.animDir     = 0;
-  this.facingRight = false;
+  this.facingRight = true;
   this.isMoving    = false;
 }
 

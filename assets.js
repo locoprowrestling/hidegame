@@ -38,6 +38,12 @@ loadImage('sheetNicky',  'Assets/players-web/spritesheets/nicky.png');
 loadImage('sheetFranky', 'Assets/players-web/spritesheets/franky.png');
 loadImage('sheetAlly',   'Assets/players-web/spritesheets/anuka.png');
 
+// ─── Generic wrestler pose sprites ────────────────────────────────
+loadImage('genericIdle',  'Assets/sprites/wrestlers/generic-idle.png');
+loadImage('genericWalk',  'Assets/sprites/wrestlers/generic-walk-sheet.png');
+loadImage('hidingSprite', 'Assets/sprites/wrestlers/generic-hiding.png');
+loadImage('caughtSprite', 'Assets/sprites/wrestlers/generic-caught.png');
+
 // ─── Enemy sprites ────────────────────────────────────────────────────
 loadImage('refereeIdle',  'Assets/sprites/wrestlers/referee-idle.png');
 loadImage('securityIdle', 'Assets/sprites/wrestlers/security-guard-idle.png');
