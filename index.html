@@ -17,181 +17,41 @@
        GAME DATA — parsed once at startup in game.js
        ═══════════════════════════════════════════════ -->
 
-  <script type="application/json" id="wrestlers-data">
+  <script type="application/json" id="teams-data">
   {
-    "factions": [
+    "teams": [
       {
-        "name": "The Rising",
+        "name": "Team A",
         "color": "#E63946",
-        "wrestlers": [
-          { "name": "Anuka",    "label": "Anuka",    "portraitKey": "portraitAnuka",    "speedMult": 1.0, "hideMult": 1.0 },
-          { "name": "Avalon",   "label": "Avalon",   "portraitKey": "portraitAvalon",   "speedMult": 0.8, "hideMult": 1.3 },
-          { "name": "Carter",   "label": "Carter",   "portraitKey": "portraitCarter",   "speedMult": 1.0, "hideMult": 1.0 },
-          { "name": "Erza",     "label": "Erza",     "portraitKey": "portraitErza",     "speedMult": 0.9, "hideMult": 0.7 },
-          { "name": "Johnny",   "label": "Johnny",   "portraitKey": "portraitJohnny",   "speedMult": 1.2, "hideMult": 0.9 },
-          { "name": "Glory",    "label": "Glory",    "portraitKey": "portraitGlory",    "speedMult": 1.2, "hideMult": 0.9 },
-          { "name": "Zeak",     "label": "Zeak",     "portraitKey": "portraitZeak",     "speedMult": 1.2, "hideMult": 0.9 },
-          { "name": "Vigilante","label": "Vigilante","portraitKey": "portraitVigilante","speedMult": 0.8, "hideMult": 1.3 }
+        "characters": [
+          {"id":"A1","label":"A1","speedMult":1.0,"hideMult":1.0},
+          {"id":"A2","label":"A2","speedMult":1.2,"hideMult":0.8},
+          {"id":"A3","label":"A3","speedMult":0.8,"hideMult":1.2},
+          {"id":"A4","label":"A4","speedMult":1.0,"hideMult":1.0}
         ]
       },
       {
-        "name": "The Pillars",
+        "name": "Team B",
         "color": "#457B9D",
-        "wrestlers": [
-          { "name": "Codah",   "label": "Codah",   "portraitKey": "portraitCodah",   "speedMult": 1.2, "hideMult": 0.9 },
-          { "name": "Cody",    "label": "Cody",    "portraitKey": "portraitCody",    "speedMult": 1.0, "hideMult": 1.0 },
-          { "name": "Dean",    "label": "Dean",    "portraitKey": "portraitDean",    "speedMult": 0.9, "hideMult": 0.7 },
-          { "name": "Franky",  "label": "Franky",  "portraitKey": "portraitFranky",  "speedMult": 1.0, "hideMult": 1.0 },
-          { "name": "Hussy",   "label": "Hussy",   "portraitKey": "portraitHussy",   "speedMult": 0.8, "hideMult": 1.3 },
-          { "name": "JT",      "label": "JT",      "portraitKey": "portraitJT",      "speedMult": 0.9, "hideMult": 0.7 },
-          { "name": "Morgana", "label": "Morgana", "portraitKey": "portraitMorgana", "speedMult": 0.8, "hideMult": 1.3 },
-          { "name": "Nicky",   "label": "Nicky",   "portraitKey": "portraitNicky",   "speedMult": 1.0, "hideMult": 1.0 }
+        "characters": [
+          {"id":"B1","label":"B1","speedMult":1.0,"hideMult":1.0},
+          {"id":"B2","label":"B2","speedMult":1.2,"hideMult":0.8},
+          {"id":"B3","label":"B3","speedMult":0.8,"hideMult":1.2},
+          {"id":"B4","label":"B4","speedMult":1.0,"hideMult":1.0}
         ]
       }
     ]
   }
   </script>
 
-  <script type="application/json" id="rooms-data">
-  [
-    {
-      "id": "locker_room_tl",
-      "label": "Locker Room",
-      "gridCol": 0, "gridRow": 0,
-      "tiles": "WWWWWWWWWWWWWWWW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WFFFFFFFFFFFFFFW WFFHFFFFFFFFHFFW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WFFFFFFFFFFFFFFF WFFHFFFFFFFFHFFF WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WFFFFFFFFFFFFFFW WFFHFFFFFFFFHFFW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": [[5,5],[10,10]]
-    },
-    {
-      "id": "hallway_top_1",
-      "label": "Hallway",
-      "gridCol": 1, "gridRow": 0,
-      "tiles": "WWWWWWWWWWWWWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWOOFFFFFFWWWW WWWWOOFFFFFFWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW FFFFFFFFFFFFFFFF FFFFFFFFFFFFFFFF WWWWFFFFFFOOWWWW WWWWFFFFFFOOWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[3,2],[12,2],[12,12],[3,12]],
-      "allySpawnPoints": [[4,7]]
-    },
-    {
-      "id": "hallway_top_2",
-      "label": "Hallway",
-      "gridCol": 2, "gridRow": 0,
-      "tiles": "WWWWWWWWWWWWWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWFFFFFFOOWWWW WWWWFFFFFFOOWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW FFFFFFFFFFFFFFFF FFFFFFFFFFFFFFFF WWWWOOFFFFFFWWWW WWWWOOFFFFFFWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[3,2],[12,2],[12,12],[3,12]],
-      "allySpawnPoints": [[11,7]]
-    },
-    {
-      "id": "locker_room_tr",
-      "label": "Locker Room",
-      "gridCol": 3, "gridRow": 0,
-      "tiles": "WWWWWWWWWWWWWWWW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WFFFFFFFFFFFFFFW WFFHFFFFFFFFHFFW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW FFFFFFFFFFFFFFFW FFFHFFFFFFFFHFFW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WFFFFFFFFFFFFFFW WFFHFFFFFFFFHFFW WFFOFFFFFFFFOFFW WFFOFFFFFFFFOFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": [[5,5],[10,10]]
-    },
-    {
-      "id": "backstage_left",
-      "label": "Backstage",
-      "gridCol": 0, "gridRow": 1,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOOFFFFFFFFFFW WWWWWWFFFFFFFFHW WWWWWWFFFFFFFFFW WWWWWWFFFFFFFFHW WWWWWWFFFFFFFFFW WWWWWWFFFFFFFFHF WWWWWWFFFFFFFFFF WWWWWWFFFFFFFFHW WFOOOFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[6,3],[12,3],[12,12],[6,12]],
-      "allySpawnPoints": [[7,7]]
-    },
-    {
-      "id": "ringside_center_1",
-      "label": "Ringside",
-      "gridCol": 1, "gridRow": 1,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOOOOOOOOOOOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW FFOFFFFFFFFFFOFF FFOFFFFFFFFFFOFF WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOOOOOOOOOOOOFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": []
-    },
-    {
-      "id": "ringside_center_2",
-      "label": "Ringside",
-      "gridCol": 2, "gridRow": 1,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOOOOOOOOOOOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW FFOFFFFFFFFFFOFF FFOFFFFFFFFFFOFF WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOFFFFFFFFFFOFW WFOOOOOOOOOOOOFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": []
-    },
-    {
-      "id": "backstage_right",
-      "label": "Backstage",
-      "gridCol": 3, "gridRow": 1,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFOOOFFW WHFFFFFFFFWWWWWW WFFFFFFFFFWWWWWW WHFFFFFFFFWWWWWW WFFFFFFFFFWWWWWW FHFFFFFFFFWWWWWW FFFFFFFFFFWWWWWW WHFFFFFFFFWWWWWW WFFFFFFFFFOOOFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[3,3],[9,3],[9,12],[3,12]],
-      "allySpawnPoints": [[7,7]]
-    },
-    {
-      "id": "entrance_left",
-      "label": "Entrance",
-      "gridCol": 0, "gridRow": 2,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFHFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFHFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFHFFFFFFFFFFFFW WFFFFFFFFFFFFFFF WFHFFFFFFFFFFFFF WFFFFFFFFFFFFFFW WFHFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFHFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[3,3],[12,3],[12,12],[3,12]],
-      "allySpawnPoints": [[6,6]]
-    },
-    {
-      "id": "entrance_center_1",
-      "label": "Entrance",
-      "gridCol": 1, "gridRow": 2,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW FFFFFFFFFFFFFFFF FFFFFFFFFFFFFFFF WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[7,2],[13,2],[13,13],[7,13],[2,13]],
-      "allySpawnPoints": []
-    },
-    {
-      "id": "entrance_center_2",
-      "label": "Entrance",
-      "gridCol": 2, "gridRow": 2,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW FFFFFFFFFFFFFFFF FFFFFFFFFFFFFFFF WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[7,2],[13,2],[13,13],[7,13],[2,13]],
-      "allySpawnPoints": []
-    },
-    {
-      "id": "entrance_right",
-      "label": "Entrance",
-      "gridCol": 3, "gridRow": 2,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFHFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFHFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFHFW FFFFFFFFFFFFFFFW FFFFFFFFFFFFFHFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFHFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFHFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWFFWWWWWWW",
-      "enemyPatrolPoints": [[3,3],[12,3],[12,12],[3,12]],
-      "allySpawnPoints": [[9,6]]
-    },
-    {
-      "id": "storage_bl",
-      "label": "Storage",
-      "gridCol": 0, "gridRow": 3,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFF WFOOFHFOOFHFFFFF WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWWWWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": [[5,5],[8,8],[11,11]]
-    },
-    {
-      "id": "storage_bm_1",
-      "label": "Storage",
-      "gridCol": 1, "gridRow": 3,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW FFFFFFFFFFFFFFFF FFOOFHFOOFHFFFFF WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWWWWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": [[5,5],[8,8]]
-    },
-    {
-      "id": "storage_bm_2",
-      "label": "Storage",
-      "gridCol": 2, "gridRow": 3,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW FFFFFFFFFFFFFFFF FFOOFHFOOFHFFFFF WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWWWWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": [[5,5],[8,8]]
-    },
-    {
-      "id": "storage_br",
-      "label": "Storage",
-      "gridCol": 3, "gridRow": 3,
-      "tiles": "WWWWWWWFFWWWWWWW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW FFFFFFFFFFFFFFFW FFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFOOFHFOOFHFFFFW WFFFFFFFFFFFFFFW WFFFFFFFFFFFFFFW WWWWWWWWWWWWWWWW",
-      "enemyPatrolPoints": [[2,2],[13,2],[13,13],[2,13]],
-      "allySpawnPoints": [[5,5],[8,8],[11,11]]
-    }
-  ]
-  </script>
-
   <!-- ═══════════════════════════════
        SCRIPTS — load order matters
        ═══════════════════════════════ -->
-  <script src="assets.js"></script>
   <script src="constants.js"></script>
-  <script src="world.js"></script>
+  <script src="objects.js"></script>
+  <script src="rooms.js"></script>
   <script src="entities.js"></script>
+  <script src="suspicion.js"></script>
   <script src="ai.js"></script>
   <script src="renderer.js"></script>
   <script src="audio.js"></script>

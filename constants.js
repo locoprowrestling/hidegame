@@ -1,89 +1,67 @@
-// ─── Rendering ────────────────────────────────────────────────
-var TILE_SIZE        = 16;   // pixels per tile (game-logic units)
-var SCREEN_TILES     = 16;   // tiles per screen dimension → 256×256 px canvas
-var GRID_SIZE        = 4;    // 4×4 screen grid
-var CANVAS_SIZE      = TILE_SIZE * SCREEN_TILES; // 256 — game-logic size
-var RENDER_SCALE     = 1;    // overwritten at boot by setupCanvas() in game.js
+// constants.js
+var CANVAS_SIZE   = 256;
+var TILE_SIZE     = 16;
 
-// ─── Minimap ──────────────────────────────────────────────────
-var MINIMAP_SIZE     = 64;   // px — full minimap square
-var MINIMAP_CELL     = MINIMAP_SIZE / GRID_SIZE; // 16px per grid cell
+// Screen states
+var SCREEN_TITLE      = 'title';
+var SCREEN_TEAM       = 'team';
+var SCREEN_CHAR       = 'char';
+var SCREEN_ROOM_INTRO = 'room_intro';
+var SCREEN_GAMEPLAY   = 'gameplay';
+var SCREEN_WIN        = 'win';
+var SCREEN_GAMEOVER   = 'gameover';
 
-// ─── Movement ─────────────────────────────────────────────────
-var PLAYER_BASE_SPEED   = 2;    // px per frame
-var ENEMY_PATROL_SPEED  = 1.2;  // px per frame
-var ENEMY_CHASE_SPEED   = 2.8;  // px per frame
-var ALLY_WANDER_SPEED   = 0.8;  // px per frame
-var ALLY_FLEE_SPEED     = 1.8;  // px per frame
+// Game phases (during SCREEN_GAMEPLAY)
+var PHASE_SETUP = 'setup';
+var PHASE_HUNT  = 'hunt';
 
-// ─── Vision ───────────────────────────────────────────────────
-var VISION_CONE_ANGLE   = 90;   // degrees, half = 45° each side of facing
-var VISION_CONE_DEPTH   = 5;    // tiles
+// Timers (seconds)
+var SETUP_TIMER          = 10;
+var HUNT_TIMER           = 45;
+var ROOM_INTRO_MS        = 1500;
 
-// ─── Detection ────────────────────────────────────────────────
-var HIDE_DETECT_RADIUS  = 1.5;  // tiles — base, multiplied by wrestler.hideMult
-var HIDE_INTERACT_RADIUS = 1;    // tiles — player must be within this to press Space
-var ALLY_FLEE_RADIUS    = 6;    // tiles — enemy within this triggers ally flee
+// Speeds (px/frame)
+var PLAYER_SPEED_BASE    = 2.0;
+var HUNTER_PATROL_SPEED  = 1.2;
+var HUNTER_INSPECT_SPEED = 1.6;
+var ALLY_MOVE_SPEED      = 1.8;
 
-// ─── Timing ───────────────────────────────────────────────────
-var SEARCH_TIMEOUT      = 3000; // ms before enemy gives up searching
-var ROUND_TIMER         = 90;   // seconds
-var TIMER_WARN_SECONDS  = 20;   // timer turns red below this threshold
-var ALERTED_FRAMES      = 30;   // frames enemy stays ALERTED before CHASING (~0.5s at 60fps)
+// Suspicion
+var SUSPICION_MAX            = 100;
+var SUSPICION_MOVE_RATE      = 5;    // /s: moving while transformed in sight cone
+var SUSPICION_INSPECT_RATE   = 3;    // /s: hunter actively inspecting player object
+var SUSPICION_DRAIN_RATE     = 1;    // /s: passive drain when still
+var SUSPICION_DRAIN_FAR      = 2;    // /s: bonus drain when hunter > FAR threshold
+var SUSPICION_RETRANSFORM    = 10;   // flat penalty per retransform during hunt
+var SUSPICION_ZONE_GOOD_MULT = 0.3;
+var SUSPICION_ZONE_BAD_MULT  = 2.0;
 
-// ─── Animation ────────────────────────────────────────────────
-var ANIM_WALK_FRAME_MS  = 150;  // ms per player/ally walk frame
-var ANIM_ENEMY_FRAME_MS = 200;  // ms per enemy patrol frame
-var WALK_FRAMES         = 8;    // frames in player/ally walk cycle
+// Hunter
+var HUNTER_SIGHT_RANGE     = 80;              // px (5 tiles)
+var HUNTER_SIGHT_HALF_ARC  = Math.PI / 4;    // 45° each side = 90° cone
+var HUNTER_INSPECT_RANGE   = 20;             // px: begin eval pause when within this
+var HUNTER_INSPECT_MS      = 1500;           // ms: pause duration at object
+var HUNTER_NOTICE_MS       = 600;            // ms: "?" pause before walking
+var HUNTER_FAR_DIST        = 80;             // px: threshold for drain bonus
+var HUNTER_INSPECT_CHANCE  = 0.006;          // per-frame chance to pick an object
 
-// ─── Entity counts ────────────────────────────────────────────
-var ENEMY_COUNT         = 4;
-var ALLY_COUNT          = 3;
+// Hunter AI states
+var HUNTER_ENTERING   = 'entering';
+var HUNTER_PATROLLING = 'patrolling';
+var HUNTER_NOTICING   = 'noticing';
+var HUNTER_INSPECTING = 'inspecting';
+var HUNTER_ACCUSING   = 'accusing';
+var HUNTER_RETURNING  = 'returning';
 
-// ─── Scoring ──────────────────────────────────────────────────
-var SCORE_PER_SECOND    = 10;
-var SCORE_PER_ALLY      = 500;
-var SCORE_FULL_SURVIVAL = 1000;
+// Scoring
+var SCORE_BASE              = 100;
+var SCORE_PER_SECOND        = 2;
+var SCORE_ALLY_BONUS        = 10;
+var SCORE_STILL_BONUS       = 25;   // never moved while transformed during hunt
+var SCORE_NO_RETRANSFORM    = 15;   // never retransformed during hunt
+var SCORE_GOOD_ZONE_BONUS   = 20;   // was in a good zone when hunt ended
 
-// ─── Colors ───────────────────────────────────────────────────
-var COLOR_RISING        = '#E63946';
-var COLOR_PILLARS       = '#457B9D';
-var COLOR_FLOOR         = '#2a2a2a';
-var COLOR_WALL          = '#111111';
-var COLOR_OBSTACLE      = '#444444';
-var COLOR_HIDING_SPOT   = '#1a3a1a';
-var COLOR_HIDING_OCC    = '#2d6a2d';
-var COLOR_VISION_PATROL = 'rgba(255,220,0,0.25)';
-var COLOR_VISION_ALERT  = 'rgba(255,140,0,0.35)';
-var COLOR_VISION_CHASE  = 'rgba(255,40,40,0.40)';
-var COLOR_HUD_BG        = 'rgba(0,0,0,0.7)';
-var COLOR_TIMER_WARN    = '#ff4444';
-var COLOR_WHITE         = '#ffffff';
-var COLOR_BLACK         = '#000000';
-
-// ─── Tile chars ───────────────────────────────────────────────
-var TILE_FLOOR       = 'F';
-var TILE_WALL        = 'W';
-var TILE_OBSTACLE    = 'O';
-var TILE_HIDING      = 'H';
-
-// ─── Enemy states ─────────────────────────────────────────────
-var STATE_PATROL     = 'PATROL';
-var STATE_ALERTED    = 'ALERTED';
-var STATE_CHASING    = 'CHASING';
-var STATE_SEARCHING  = 'SEARCHING';
-var STATE_RETURNING  = 'RETURNING';
-
-// ─── Ally states ──────────────────────────────────────────────
-var STATE_WANDERING  = 'WANDERING';
-var STATE_FLEEING    = 'FLEEING';
-var STATE_HIDING     = 'HIDING';
-var STATE_CAUGHT     = 'CAUGHT';
-
-// ─── Screen flow states ───────────────────────────────────────
-var SCREEN_LOADING   = 'LOADING';
-var SCREEN_TITLE     = 'TITLE';
-var SCREEN_SELECT    = 'CHARACTER_SELECT';
-var SCREEN_GAMEPLAY  = 'GAMEPLAY';
-var SCREEN_WIN       = 'WIN';
-var SCREEN_GAMEOVER  = 'GAME_OVER';
+// UI
+var UI_BAR_H     = 20;   // px: top HUD bar height
+var MINIMAP_W    = 48;
+var MINIMAP_H    = 48;

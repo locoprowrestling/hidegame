@@ -1,155 +1,114 @@
-// ─────────────────────────────────────────────────────────────────
-// entities.js — Player, Enemy, Ally, HidingSpot constructors
-// Depends on: constants.js, world.js
-// ─────────────────────────────────────────────────────────────────
-
-// ─── HidingSpot ───────────────────────────────────────────────────
-// tileCol, tileRow: tile-aligned grid position on the room
-// Pixel position is the top-left corner of the tile.
-function HidingSpot(tileCol, tileRow, room) {
-  this.tileCol    = tileCol;
-  this.tileRow    = tileRow;
-  this.room       = room;          // reference to owning Room
-  this.x          = tileCol * TILE_SIZE;
-  this.y          = tileRow * TILE_SIZE;
-  this.cx         = this.x + TILE_SIZE / 2; // pixel center X
-  this.cy         = this.y + TILE_SIZE / 2; // pixel center Y
-  this.isOccupied = false;
-  this.occupant   = null;          // entity currently hiding here
-}
+// entities.js — Player, Hunter, Ally constructors
 
 // ─── Player ───────────────────────────────────────────────────────
-// wrestler: { name, speedMult, hideMult }
-// faction:  { name, color }
-// startRoom: Room
-function Player(wrestler, faction, startRoom) {
-  this.wrestler   = wrestler;
-  this.faction    = faction;
-  this.room       = startRoom;
-  this.screenCol  = startRoom.gridCol;
-  this.screenRow  = startRoom.gridRow;
+function Player(teamData, charData) {
+  this.team      = teamData;   // {name, color, characters}
+  this.char      = charData;   // {id, label, speedMult, hideMult}
 
-  // Spawn at center of screen
-  this.x          = CANVAS_SIZE / 2 - TILE_SIZE / 2;
-  this.y          = CANVAS_SIZE / 2 - TILE_SIZE / 2;
+  this.x = 0; this.y = 0;     // set by startRound
+  this.width  = 12;
+  this.height = 12;
+  this.speed  = PLAYER_SPEED_BASE * charData.speedMult;
 
-  this.width      = TILE_SIZE - 2;
-  this.height     = TILE_SIZE - 2;
+  // Transform state
+  this.isTransformed = false;
+  this.objIdx        = 0;      // index into OBJECTS array
 
-  this.speed      = PLAYER_BASE_SPEED * wrestler.speedMult;
-  this.hideDetectRadius = HIDE_DETECT_RADIUS * wrestler.hideMult; // tiles
+  // Scoring flags (reset each round)
+  this.movedWhileTransformed = false;
+  this.retransformed         = false;
+  this.wasInGoodZone         = false;
 
-  this.isHidden   = false;
-  this.hidingSpot = null;   // HidingSpot | null
-
-  this.facingAngle = 0;     // radians, 0 = right
+  this.facingAngle = 0;
+  this.isMoving    = false;
   this.alive       = true;
-
-  this.animFrame  = 0;
-  this.animTimer  = 0;
-  this.animDir    = 0;      // 0=down 1=left 2=right 3=up
-  this.facingRight = true;  // regenerated sheets face right; flip only for left
-  this.isMoving   = false;
 }
 
-// ─── Enemy ────────────────────────────────────────────────────────
-// homeRoom: Room — enemy returns here after SEARCHING
-// patrolPoints: [[col,row],...] — tile coords for patrol loop
-function Enemy(homeRoom, patrolPoints) {
-  this.homeRoom       = homeRoom;
-  this.room           = homeRoom;
-  this.screenCol      = homeRoom.gridCol;
-  this.screenRow      = homeRoom.gridRow;
+// ─── Hunter ───────────────────────────────────────────────────────
+function Hunter(teamData, room) {
+  this.team   = teamData;
+  this.room   = room;
 
-  // Start at first patrol point (fall back to tile [1,1] if array is empty)
-  var startPt         = patrolPoints[0] || [1, 1];
-  this.x              = startPt[0] * TILE_SIZE;
-  this.y              = startPt[1] * TILE_SIZE;
+  // Start off-screen at entry point
+  this.x = room.hunterEntry.x;
+  this.y = room.hunterEntry.y;
+  this.width  = 14;
+  this.height = 14;
+  this.speed  = HUNTER_PATROL_SPEED;
 
-  this.width          = TILE_SIZE - 2;
-  this.height         = TILE_SIZE - 2;
+  this.state        = HUNTER_ENTERING;
+  this.patrolIdx    = 0;          // current waypoint in room.patrolPath
+  this.stateTimer   = 0;          // ms counter for timed states
+  this.inspectTarget = null;      // entity being inspected (Player | Ally | null)
+  this.inspectDest  = null;       // {x, y} target pixel for inspection walk
+  this.returnDest   = null;       // {x, y} to return to after inspecting
 
-  this.patrolPoints   = patrolPoints;
-  this.patrolIndex    = 0;           // current waypoint index
-
-  this.facingAngle    = 0;           // radians
-
-  this.state          = STATE_PATROL;
-  this.alertedFrames  = 0;           // counts down from ALERTED_FRAMES
-
-  // Last known player position (pixel, on enemy's current screen)
-  this.lastKnownX     = null;
-  this.lastKnownY     = null;
-
-  this.searchTimer    = 0;           // ms remaining in SEARCHING/RETURNING timeout
-  this.isChasing      = false;       // true while following player across screens
-
-  this.animFrame  = 0;
-  this.animTimer  = 0;
-  this.animDir    = 0;
-  this.isMoving   = true;            // enemies are always moving
+  this.facingAngle  = 0;
+  this.isMoving     = true;
 }
 
 // ─── Ally ─────────────────────────────────────────────────────────
-// spawnRoom: Room — allies never cross screens
-// spawnPoint: [col, row] tile coords
-function Ally(spawnRoom, spawnPoint) {
-  this.room       = spawnRoom;
-  this.screenCol  = spawnRoom.gridCol;
-  this.screenRow  = spawnRoom.gridRow;
+function Ally(teamData, spawnPt) {
+  this.team  = teamData;
 
-  this.x          = spawnPoint[0] * TILE_SIZE;
-  this.y          = spawnPoint[1] * TILE_SIZE;
+  this.x = spawnPt.x;
+  this.y = spawnPt.y;
+  this.width  = 12;
+  this.height = 12;
+  this.speed  = ALLY_MOVE_SPEED;
 
-  this.width      = TILE_SIZE - 2;
-  this.height     = TILE_SIZE - 2;
+  // Ally picks an object and a destination zone during setup
+  this.objIdx      = 0;
+  this.destX       = spawnPt.x;
+  this.destY       = spawnPt.y;
+  this.isTransformed = false;
+  this.alive       = true;
+  this.badHide     = Math.random() < 0.25;  // 25% chance of poor placement
 
-  this.state      = STATE_WANDERING;
-  this.hidingSpot = null;          // target HidingSpot when FLEEING, current when HIDING
-
-  // Wander: random direction timer
-  this.wanderAngle    = Math.random() * Math.PI * 2;
-  this.wanderTimer    = 0;         // ms until next direction change
-
-  this.facingAngle    = 0;
-  this.alive          = true;
-
-  this.animFrame   = 0;
-  this.animTimer   = 0;
-  this.animDir     = 0;
-  this.facingRight = true;
+  this.facingAngle = 0;
   this.isMoving    = false;
 }
 
-// ─── Entity distance helper (pixel space) ────────────────────────
-// Returns distance in pixels between two entities' centers
-// Note: uses entity center (x + width/2). HidingSpots use x + TILE_SIZE/2 as center
-// (a 1px difference). Do not pass HidingSpot directly — compute distance via tileCol/tileRow.
+// ─── Pixel distance between two entities (centers) ────────────────
 function entityDist(a, b) {
   var ax = a.x + a.width  / 2;
   var ay = a.y + a.height / 2;
   var bx = b.x + b.width  / 2;
   var by = b.y + b.height / 2;
-  var dx = ax - bx;
-  var dy = ay - by;
-  return Math.sqrt(dx * dx + dy * dy);
+  return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
 }
 
-// Distance in tiles between entity centers
-function entityDistTiles(a, b) {
-  return entityDist(a, b) / TILE_SIZE;
+// ─── Pixel distance from entity center to a point ─────────────────
+function distToPoint(entity, px, py) {
+  var ex = entity.x + entity.width  / 2;
+  var ey = entity.y + entity.height / 2;
+  return Math.sqrt((ex - px) * (ex - px) + (ey - py) * (ey - py));
 }
 
-// ─── Build HidingSpots from a Room ────────────────────────────────
-// Scans room tiles for TILE_HIDING and returns an array of HidingSpot objects.
-function buildHidingSpotsForRoom(room) {
-  var spots = [];
-  for (var row = 0; row < SCREEN_TILES; row++) {
-    for (var col = 0; col < SCREEN_TILES; col++) {
-      if (room.getTile(col, row) === TILE_HIDING) {
-        spots.push(new HidingSpot(col, row, room));
-      }
-    }
+// ─── Move entity toward (tx, ty) at speed; returns true if arrived ─
+function moveToward(entity, tx, ty, speed) {
+  var dx = tx - (entity.x + entity.width  / 2);
+  var dy = ty - (entity.y + entity.height / 2);
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist <= speed) {
+    entity.x = tx - entity.width  / 2;
+    entity.y = ty - entity.height / 2;
+    entity.isMoving = false;
+    return true;
   }
-  return spots;
+  entity.x += (dx / dist) * speed;
+  entity.y += (dy / dist) * speed;
+  entity.facingAngle = Math.atan2(dy, dx);
+  entity.isMoving = true;
+  return false;
+}
+
+// ─── Clamp entity to canvas playfield (below UI bar) ──────────────
+function clampToField(entity) {
+  var minX = 2;
+  var minY = UI_BAR_H + 2;
+  var maxX = CANVAS_SIZE - entity.width  - 2;
+  var maxY = CANVAS_SIZE - entity.height - 2;
+  entity.x = Math.max(minX, Math.min(maxX, entity.x));
+  entity.y = Math.max(minY, Math.min(maxY, entity.y));
 }

@@ -1,612 +1,338 @@
-// ─────────────────────────────────────────────────────────────────
-// renderer.js — all canvas draw calls
-// Depends on: constants.js, world.js, entities.js, ai.js
-// ─────────────────────────────────────────────────────────────────
+// renderer.js — all canvas drawing
 
-// ─── Room → tileset + tile-index mapping ─────────────────────────
-// Each sheet is ~1568×1003px with 10 tiles in a single horizontal row.
-// Tile art is centered vertically; measurements are per-sheet (px):
-//   sx0   = x of first tile's art
-//   sy0   = y of top of tile art band
-//   sw/sh = width/height of each tile's art region
-//   stride = px from one tile's x start to the next
-// Tile indices (0-9, left→right): F=floor, W=wall, O=obstacle, H=hiding spot
-var ROOM_TILESETS = {
-  //                                                            F  W  O  H   sx0  sy0  sw   sh   stride
-  locker_room_tl:    { img: 'tileLockerRoom',    F: 4, W: 9, O: 2, H: 0, sx0: 42, sy0: 436, sw: 128, sh: 127, stride: 146 },
-  locker_room_tr:    { img: 'tileLockerRoom',    F: 4, W: 9, O: 2, H: 0, sx0: 42, sy0: 436, sw: 128, sh: 127, stride: 146 },
-  hallway_top_1:     { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
-  hallway_top_2:     { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
-  backstage_left:    { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
-  backstage_right:   { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
-  ringside_center_1: { img: 'tileWrestlingRing', F: 4, W: 8, O: 6, H: 7, sx0: 45, sy0: 435, sw: 128, sh: 128, stride: 154 },
-  ringside_center_2: { img: 'tileWrestlingRing', F: 4, W: 8, O: 6, H: 7, sx0: 45, sy0: 435, sw: 128, sh: 128, stride: 154 },
-  entrance_left:     { img: 'tileEntrance',      F: 5, W: 2, O: 7, H: 0, sx0: 34, sy0: 436, sw: 128, sh: 138, stride: 153 },
-  entrance_right:    { img: 'tileEntrance',      F: 5, W: 2, O: 7, H: 0, sx0: 34, sy0: 436, sw: 128, sh: 138, stride: 153 },
-  entrance_center_1: { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
-  entrance_center_2: { img: 'tileBackstage',     F: 0, W: 4, O: 3, H: 5, sx0: 44, sy0: 432, sw: 128, sh: 130, stride: 152 },
-  storage_bl:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
-  storage_bm_1:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
-  storage_bm_2:      { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
-  storage_br:        { img: 'tileStorage',       F: 0, W: 9, O: 2, H: 4, sx0: 27, sy0: 435, sw: 128, sh: 132, stride: 151 },
-};
+var _imgCache = {};
 
-// ─── Screen overlay helper ────────────────────────────────────────
-// Draws a full-screen overlay PNG letterboxed to canvas width.
-function drawScreenOverlay(ctx, img) {
-  ctx.fillStyle = COLOR_BLACK;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  if (!img || !img.complete || !img.naturalWidth) return;
-  var drawW = CANVAS_SIZE;
-  var drawH = Math.round(img.naturalHeight / img.naturalWidth * CANVAS_SIZE);
-  var drawY = Math.floor((CANVAS_SIZE - drawH) / 2);
-  ctx.drawImage(img, 0, drawY, drawW, drawH);
+function _loadImg(src) {
+  if (!_imgCache[src]) {
+    var img = new Image();
+    img.src = src;
+    _imgCache[src] = img;
+  }
+  return _imgCache[src];
 }
 
-// imgReady — returns true if an Image element is fully loaded and usable
-function imgReady(img) {
-  return !!(img && img.complete && img.naturalWidth > 0);
+// Draws img at (x,y,w,h) if loaded; falls back to filled rect with color.
+function _drawImgOrRect(ctx, src, x, y, w, h, color) {
+  if (src) {
+    var img = _loadImg(src);
+    if (img.complete && img.naturalWidth > 0) {
+      ctx.drawImage(img, x, y, w, h);
+      return;
+    }
+  }
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
 }
 
-// Per-character spritesheet metadata.
-// Each sheet is a single horizontal strip. The original 9-frame sheets use
-// frame 0 idle, frames 1-8 walk; the newer 10-frame TAS sheets use frames
-// 0-7 as the active walk cycle and include extra non-walk poses at the end.
-// The regenerated sheets face right; drawSpriteFrame flips them for left-facing movement.
-var PLAYER_SHEETS = {
-  'Anuka':     { key: 'sheetAnuka',     frameCount: 10, walkStart: 0 },
-  'Avalon':    { key: 'sheetAvalon',    frameCount: 10, walkStart: 0 },
-  'Carter':    { key: 'sheetCarter',    frameCount: 9,  walkStart: 1 },
-  'Codah':     { key: 'sheetCodah',     frameCount: 10, walkStart: 0 },
-  'Cody':      { key: 'sheetCody',      frameCount: 9,  walkStart: 1 },
-  'Dean':      { key: 'sheetDean',      frameCount: 10, walkStart: 0 },
-  'Erza':      { key: 'sheetErza',      frameCount: 9,  walkStart: 1 },
-  'Franky':    { key: 'sheetFranky',    frameCount: 9,  walkStart: 1 },
-  'Glory':     { key: 'sheetGlory',     frameCount: 10, walkStart: 0 },
-  'Hussy':     { key: 'sheetHussy',     frameCount: 10, walkStart: 0 },
-  'Johnny':    { key: 'sheetJohnny',    frameCount: 9,  walkStart: 1 },
-  'JT':        { key: 'sheetJT',        frameCount: 9,  walkStart: 1 },
-  'Morgana':   { key: 'sheetMorgana',   frameCount: 10, walkStart: 0 },
-  'Nicky':     { key: 'sheetNicky',     frameCount: 9,  walkStart: 1 },
-  'Vigilante': { key: 'sheetVigilante', frameCount: 10, walkStart: 0 },
-  'Zeak':      { key: 'sheetZeak',      frameCount: 9,  walkStart: 1 },
-};
-var PLAYER_SHEET_DEFAULT = { key: 'genericWalk', frameCount: 9, walkStart: 1 };
-var PLAYER_SHEET_FRAME_H = 96;
-var CHARACTER_SPRITE_W = 28;
-var CHARACTER_SPRITE_H = 42;
-
-function drawLoadingScreen(ctx) {
-  drawScreenOverlay(ctx, ASSETS.screenLoading);
-}
-
-// ─── Tile layer ───────────────────────────────────────────────────
+// ─── Room ────────────────────────────────────────────────────────
 function drawRoom(ctx, room) {
-  var config  = ROOM_TILESETS[room.id];
-  var tileset = config ? ASSETS[config.img] : null;
-  var useImg  = imgReady(tileset);
+  // Background
+  _drawImgOrRect(ctx, room.bgTileset, 0, 0, CANVAS_SIZE, CANVAS_SIZE, room.bgColor);
 
-  for (var row = 0; row < SCREEN_TILES; row++) {
-    for (var col = 0; col < SCREEN_TILES; col++) {
-      var tile = room.getTile(col, row);
-
-      if (useImg) {
-        var idx;
-        switch (tile) {
-          case TILE_WALL:     idx = config.W; break;
-          case TILE_OBSTACLE: idx = config.O; break;
-          case TILE_HIDING:   idx = config.H; break;
-          default:            idx = config.F; break;
-        }
-        ctx.drawImage(
-          tileset,
-          config.sx0 + idx * config.stride, config.sy0, config.sw, config.sh,
-          col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE
-        );
-      } else {
-        switch (tile) {
-          case TILE_WALL:     ctx.fillStyle = COLOR_WALL;        break;
-          case TILE_OBSTACLE: ctx.fillStyle = COLOR_OBSTACLE;    break;
-          case TILE_HIDING:   ctx.fillStyle = COLOR_HIDING_SPOT; break;
-          default:            ctx.fillStyle = COLOR_FLOOR;       break;
-        }
-        ctx.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-      }
+  // Static props (decorative; drawn over tileset)
+  // Only draw if tileset NOT loaded (avoid double-drawing on clean tilesets)
+  var img = room.bgTileset ? _loadImg(room.bgTileset) : null;
+  var tilesetLoaded = img && img.complete && img.naturalWidth > 0;
+  if (!tilesetLoaded) {
+    var props = room.staticProps;
+    for (var i = 0; i < props.length; i++) {
+      var p = props[i];
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x, p.y, p.w, p.h);
     }
   }
 }
 
-// ─── Hiding spot occupied indicator ──────────────────────────────
-function drawHidingSpots(ctx, hidingSpots, currentRoom) {
-  for (var i = 0; i < hidingSpots.length; i++) {
-    var hs = hidingSpots[i];
-    if (hs.room !== currentRoom) continue;
-    if (hs.isOccupied && hs.occupant !== null) {
-      // Bright border when player is hiding here
-      ctx.strokeStyle = COLOR_WHITE;
-      ctx.lineWidth   = 2;
-      ctx.strokeRect(hs.x + 1, hs.y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-    }
-  }
-}
-
-// ─── Vision cone ──────────────────────────────────────────────────
-function drawVisionCone(ctx, enemy) {
-  var cx = enemy.x + enemy.width  / 2;
-  var cy = enemy.y + enemy.height / 2;
-  var depth = VISION_CONE_DEPTH * TILE_SIZE;
-  var halfAngle = (VISION_CONE_ANGLE / 2) * (Math.PI / 180);
-
-  switch (enemy.state) {
-    case STATE_PATROL:    ctx.fillStyle = COLOR_VISION_PATROL; break;
-    case STATE_ALERTED:   ctx.fillStyle = COLOR_VISION_ALERT;  break;
-    case STATE_CHASING:
-    case STATE_SEARCHING: ctx.fillStyle = COLOR_VISION_CHASE;  break;
-    default:              ctx.fillStyle = COLOR_VISION_PATROL; break;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, depth, enemy.facingAngle - halfAngle, enemy.facingAngle + halfAngle);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function getSheetFrameBounds(img, config, frameIdx) {
-  var frameCount = config.frameCount || 9;
-  var safeIdx = Math.max(0, Math.min(frameIdx, frameCount - 1));
-  var sx = Math.round(img.naturalWidth * safeIdx / frameCount);
-  var nextX = Math.round(img.naturalWidth * (safeIdx + 1) / frameCount);
-  return { sx: sx, sw: Math.max(1, nextX - sx) };
-}
-
-function getEntitySpriteRect(entity, drawW, drawH) {
-  return {
-    x: Math.round(entity.x + TILE_SIZE / 2 - drawW / 2),
-    y: Math.round(entity.y + TILE_SIZE - drawH),
-    w: drawW,
-    h: drawH
-  };
-}
-
-// drawSpriteFrame — draws one frame from a horizontal strip, flipping H if needed
-function drawSpriteFrame(ctx, img, config, frameIdx, frameH, dx, dy, dw, dh, flipH) {
-  var frame = getSheetFrameBounds(img, config, frameIdx);
-  if (flipH) {
-    ctx.save();
-    ctx.translate(dx + dw, dy);
-    ctx.scale(-1, 1);
-    ctx.drawImage(img, frame.sx, 0, frame.sw, frameH, 0, 0, dw, dh);
-    ctx.restore();
-  } else {
-    ctx.drawImage(img, frame.sx, 0, frame.sw, frameH, dx, dy, dw, dh);
-  }
-}
-
-// ─── Entity sprites ───────────────────────────────────────────────
+// ─── Entities ────────────────────────────────────────────────────
 function drawPlayer(ctx, player) {
-  var x = player.x;
-  var y = player.y;
-  var sprite = getEntitySpriteRect(player, CHARACTER_SPRITE_W, CHARACTER_SPRITE_H);
+  if (!player.alive) return;
+  var x = Math.round(player.x);
+  var y = Math.round(player.y);
 
-  var config = PLAYER_SHEETS[player.wrestler.name] || PLAYER_SHEET_DEFAULT;
-  var img    = ASSETS[config.key];
-
-  if (player.isHidden) {
-    ctx.globalAlpha = 0.7;
-    if (imgReady(ASSETS.hidingSprite)) {
-      ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
-    } else if (imgReady(img)) {
-      drawSpriteFrame(ctx, img, config, 0, PLAYER_SHEET_FRAME_H, sprite.x, sprite.y, sprite.w, sprite.h, !player.facingRight);
-    } else {
-      ctx.fillStyle = player.faction.color;
-      ctx.fillRect(x + 1, y + 1, player.width, player.height);
-    }
-    ctx.globalAlpha = 1.0;
-    return;
-  }
-
-  if (!player.isMoving && config === PLAYER_SHEET_DEFAULT && imgReady(ASSETS.genericIdle)) {
-    ctx.drawImage(ASSETS.genericIdle, sprite.x, sprite.y, sprite.w, sprite.h);
-  } else if (imgReady(img)) {
-    var frameIdx = player.isMoving ? config.walkStart + player.animFrame : 0;
-    drawSpriteFrame(ctx, img, config, frameIdx, PLAYER_SHEET_FRAME_H, sprite.x, sprite.y, sprite.w, sprite.h, !player.facingRight);
+  if (player.isTransformed) {
+    var obj = OBJECTS[player.objIdx];
+    _drawImgOrRect(ctx, obj.sprite, x, y, obj.w, obj.h, obj.color);
+    // Faint team-color border to indicate it's the player
+    ctx.strokeStyle = player.team.color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, obj.w, obj.h);
   } else {
-    ctx.fillStyle = player.faction.color;
-    ctx.fillRect(x + 1, y + 1, player.width, player.height);
+    ctx.fillStyle = player.team.color;
+    ctx.fillRect(x, y, player.width, player.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '5px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText(player.char.label, x + player.width/2, y + player.height/2 + 2);
   }
 }
 
-function drawEnemy(ctx, enemy, index) {
-  var x   = enemy.x;
-  var y   = enemy.y;
-  var img = (index % 2 === 0) ? ASSETS.refereeIdle : ASSETS.securityIdle;
-  var sprite = getEntitySpriteRect(enemy, CHARACTER_SPRITE_W, CHARACTER_SPRITE_H);
+function drawHunter(ctx, hunter) {
+  var x = Math.round(hunter.x);
+  var y = Math.round(hunter.y);
+  ctx.fillStyle = hunter.team.color;
+  ctx.fillRect(x, y, hunter.width, hunter.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '5px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('H', x + hunter.width/2, y + hunter.height/2 + 2);
 
-  if (imgReady(img)) {
-    ctx.drawImage(img, sprite.x, sprite.y, sprite.w, sprite.h);
-  } else {
-    ctx.fillStyle = '#cc0000';
-    ctx.fillRect(x + 1, y + 1, enemy.width, enemy.height);
+  // "?" indicator during NOTICING
+  if (hunter.state === HUNTER_NOTICING) {
+    ctx.fillStyle = '#ffff00';
+    ctx.font = '8px "Press Start 2P"';
+    ctx.fillText('?', x + hunter.width/2, y - 3);
   }
 }
 
 function drawAlly(ctx, ally) {
-  var x   = ally.x;
-  var y   = ally.y;
-  var img = ASSETS.genericWalk;
-  var config = PLAYER_SHEET_DEFAULT;
-  var sprite = getEntitySpriteRect(ally, CHARACTER_SPRITE_W, CHARACTER_SPRITE_H);
+  if (!ally.alive) return;
+  var x = Math.round(ally.x);
+  var y = Math.round(ally.y);
 
-  if (ally.state === STATE_CAUGHT) {
-    if (imgReady(ASSETS.caughtSprite)) {
-      ctx.drawImage(ASSETS.caughtSprite, sprite.x, sprite.y, sprite.w, sprite.h);
-    }
-    return;
-  }
-
-  if (ally.state === STATE_HIDING) {
-    ctx.globalAlpha = 0.5;
-    if (imgReady(ASSETS.hidingSprite)) {
-      ctx.drawImage(ASSETS.hidingSprite, x, y, TILE_SIZE, TILE_SIZE);
-    } else if (imgReady(img)) {
-      drawSpriteFrame(ctx, img, config, 0, PLAYER_SHEET_FRAME_H, x, y, TILE_SIZE, TILE_SIZE, !ally.facingRight);
-    } else {
-      ctx.fillStyle = '#88aacc';
-      ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
-    }
+  if (ally.isTransformed) {
+    var obj = OBJECTS[ally.objIdx];
+    ctx.globalAlpha = 0.6;
+    _drawImgOrRect(ctx, obj.sprite, x, y, obj.w, obj.h, obj.color);
     ctx.globalAlpha = 1.0;
-    return;
-  }
-
-  if (!ally.isMoving && imgReady(ASSETS.genericIdle)) {
-    ctx.drawImage(ASSETS.genericIdle, sprite.x, sprite.y, sprite.w, sprite.h);
-  } else if (imgReady(img)) {
-    var frameIdx = ally.isMoving ? ally.animFrame + 1 : 0;
-    drawSpriteFrame(ctx, img, config, frameIdx, PLAYER_SHEET_FRAME_H, sprite.x, sprite.y, sprite.w, sprite.h, !ally.facingRight);
   } else {
-    ctx.fillStyle = '#88aacc';
-    ctx.fillRect(x + 1, y + 1, ally.width, ally.height);
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = ally.team.color;
+    ctx.fillRect(x, y, ally.width, ally.height);
+    ctx.globalAlpha = 1.0;
+  }
+}
+
+// ─── UI overlay (drawn on top every frame) ───────────────────────
+function drawUI(ctx, gs) {
+  // Top bar background
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.fillRect(0, 0, CANVAS_SIZE, UI_BAR_H);
+
+  // Phase label
+  ctx.fillStyle = gs.phase === PHASE_SETUP ? '#44ff44' : '#ff4444';
+  ctx.font = '5px "Press Start 2P"';
+  ctx.textAlign = 'left';
+  ctx.fillText(gs.phase === PHASE_SETUP ? 'SETUP' : 'HUNT', 3, 13);
+
+  // Timer
+  var timerMs  = gs.phase === PHASE_SETUP ? gs.setupTimer : gs.huntTimer;
+  var timerSec = Math.ceil(timerMs / 1000);
+  ctx.fillStyle = timerSec <= 10 ? '#ff4444' : '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.fillText(timerSec + 's', CANVAS_SIZE / 2, 13);
+
+  // Suspicion bar (right side)
+  var barW  = 60;
+  var barH  = 7;
+  var barX  = CANVAS_SIZE - barW - 3;
+  var barY  = 6;
+  var pct   = gs.suspicion / SUSPICION_MAX;
+  ctx.fillStyle = '#333333';
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = pct > 0.7 ? '#ff2222' : pct > 0.4 ? '#ffaa00' : '#22cc22';
+  ctx.fillRect(barX, barY, Math.round(barW * pct), barH);
+  ctx.strokeStyle = '#888888';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  // Current object name (bottom strip during gameplay)
+  if (gs.screen === SCREEN_GAMEPLAY) {
+    var obj = OBJECTS[gs.player.objIdx];
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, CANVAS_SIZE - 12, CANVAS_SIZE, 12);
+    ctx.fillStyle = '#cccccc';
+    ctx.font = '4px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    var prefix = gs.player.isTransformed ? '[DISGUISED]' : '[SPACE to disguise]';
+    ctx.fillText(prefix + ' ' + (gs.player.objIdx + 1) + ':' + obj.label, CANVAS_SIZE/2, CANVAS_SIZE - 3);
   }
 }
 
 // ─── Mini-map ────────────────────────────────────────────────────
-function drawMinimap(ctx, gs) {
-  var ox = 2;
-  var oy = 14;
+function drawMiniMap(ctx, gs) {
+  var mx = CANVAS_SIZE - MINIMAP_W - 3;
+  var my = CANVAS_SIZE - MINIMAP_H - 14;  // above bottom strip
 
   // Background
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(ox, oy, MINIMAP_SIZE, MINIMAP_SIZE);
+  ctx.fillRect(mx, my, MINIMAP_W, MINIMAP_H);
+  ctx.strokeStyle = '#555555';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(mx, my, MINIMAP_W, MINIMAP_H);
 
-  // Grid cells
-  for (var row = 0; row < GRID_SIZE; row++) {
-    for (var col = 0; col < GRID_SIZE; col++) {
-      var cx = ox + col * MINIMAP_CELL;
-      var cy = oy + row * MINIMAP_CELL;
-      if (col === gs.player.screenCol && row === gs.player.screenRow) {
-        ctx.strokeStyle = COLOR_WHITE;
-        ctx.lineWidth   = 1;
-        ctx.strokeRect(cx + 0.5, cy + 0.5, MINIMAP_CELL - 1, MINIMAP_CELL - 1);
-      } else {
-        ctx.strokeStyle = '#555555';
-        ctx.lineWidth   = 0.5;
-        ctx.strokeRect(cx + 0.5, cy + 0.5, MINIMAP_CELL - 1, MINIMAP_CELL - 1);
-      }
-    }
+  var scaleX = MINIMAP_W / CANVAS_SIZE;
+  var scaleY = MINIMAP_H / CANVAS_SIZE;
+
+  function dot(entity, color, alpha) {
+    var dx = mx + (entity.x + entity.width/2)  * scaleX;
+    var dy = my + (entity.y + entity.height/2) * scaleY;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(dx - 1, dy - 1, 2, 2);
+    ctx.globalAlpha = 1;
   }
 
-  // Enemy dots
-  for (var i = 0; i < gs.enemies.length; i++) {
-    var en = gs.enemies[i];
-    var ex = ox + en.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2;
-    var ey = oy + en.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2;
-    if (imgReady(ASSETS.dotEnemy)) {
-      ctx.drawImage(ASSETS.dotEnemy, ex - 2, ey - 2, 4, 4);
-    } else {
-      ctx.fillStyle = '#ff4444';
-      ctx.fillRect(ex - 1, ey - 1, 3, 3);
-    }
+  // Hunter
+  if (gs.hunter) dot(gs.hunter, gs.hunter.team.color, 1.0);
+
+  // Allies
+  for (var i = 0; i < gs.allies.length; i++) {
+    if (gs.allies[i].alive) dot(gs.allies[i], gs.player.team.color, 0.6);
   }
 
-  // Ally dots
-  var allyDotKey = (gs.player.faction.name === 'The Rising') ? 'dotAllyRising' : 'dotAllyPillars';
-  for (var j = 0; j < gs.allies.length; j++) {
-    var al = gs.allies[j];
-    if (al.state === STATE_CAUGHT) continue;
-    var ax = ox + al.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2;
-    var ay = oy + al.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2;
-    if (imgReady(ASSETS[allyDotKey])) {
-      ctx.drawImage(ASSETS[allyDotKey], ax - 1, ay - 1, 3, 3);
-    } else {
-      ctx.fillStyle = '#aaccee';
-      ctx.fillRect(ax - 1, ay - 1, 3, 3);
-    }
-  }
-
-  // Player dot
-  var playerDotKey = (gs.player.faction.name === 'The Rising') ? 'dotPlayerRising' : 'dotPlayerPillars';
-  var px = ox + gs.player.screenCol * MINIMAP_CELL + MINIMAP_CELL / 2;
-  var py = oy + gs.player.screenRow * MINIMAP_CELL + MINIMAP_CELL / 2;
-  if (imgReady(ASSETS[playerDotKey])) {
-    ctx.drawImage(ASSETS[playerDotKey], px - 2, py - 2, 4, 4);
-  } else {
-    ctx.fillStyle = gs.player.faction.color;
-    ctx.fillRect(px - 2, py - 2, 4, 4);
-  }
-
-  // Minimap frame overlay (drawn last, on top of dots)
-  if (imgReady(ASSETS.minimapFrame)) {
-    ctx.drawImage(ASSETS.minimapFrame, ox, oy, MINIMAP_SIZE, MINIMAP_SIZE);
+  // Player dot — visible during setup only
+  if (gs.phase === PHASE_SETUP) {
+    dot(gs.player, gs.player.team.color, 1.0);
   }
 }
 
-// ─── HUD ──────────────────────────────────────────────────────────
-function drawHUD(ctx, gs) {
-  var ICON_CELL   = 64;
-  var ICON_STRIDE = 66;
-
-  // Top strip background
-  ctx.fillStyle = COLOR_HUD_BG;
-  ctx.fillRect(0, 0, CANVAS_SIZE, 12);
-
-  // Timer icon (row 0, col 1)
-  if (imgReady(ASSETS.iconsSheet)) {
-    ctx.drawImage(ASSETS.iconsSheet, ICON_STRIDE, 0, ICON_CELL, ICON_CELL, 56, 1, 10, 10);
-  }
-
-  // Timer text
-  var secLeft = Math.ceil(gs.roundTimer / 1000);
-  ctx.fillStyle = (secLeft <= TIMER_WARN_SECONDS) ? COLOR_TIMER_WARN : COLOR_WHITE;
-  ctx.font      = '6px "Press Start 2P"';
-  ctx.fillText(pad2(secLeft) + 's', 68, 9);
-
-  // Ally count icon (row 0, col 3)
-  if (imgReady(ASSETS.iconsSheet)) {
-    ctx.drawImage(ASSETS.iconsSheet, ICON_STRIDE * 3, 0, ICON_CELL, ICON_CELL, 130, 1, 10, 10);
-  }
-
-  // Ally count text
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('x' + gs.alliesAlive, 142, 9);
-
-  // Hidden indicator — flashes at 4Hz when player is hiding
-  if (gs.player.isHidden) {
-    var flashOn = Math.floor(Date.now() / 250) % 2 === 0;
-    if (flashOn) {
-      if (imgReady(ASSETS.iconHidden)) {
-        ctx.drawImage(ASSETS.iconHidden, CANVAS_SIZE - 14, 1, 10, 10);
-      } else {
-        ctx.fillStyle = '#44cc44';
-        ctx.fillRect(CANVAS_SIZE - 14, 1, 10, 10);
-      }
-    }
-  }
-
-  // Bottom strip — room label
-  ctx.fillStyle = COLOR_HUD_BG;
-  ctx.fillRect(0, CANVAS_SIZE - 12, CANVAS_SIZE, 12);
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.font      = '5px "Press Start 2P"';
-  var label = gs.player.room ? gs.player.room.label : '';
-  ctx.fillText(label, 4, CANVAS_SIZE - 3);
-}
-
-function pad2(n) {
-  return n < 10 ? '0' + n : '' + n;
-}
-
-// ─── Screen overlays ─────────────────────────────────────────────
-function drawTitleScreen(ctx) {
-  drawScreenOverlay(ctx, ASSETS.screenTitle);
-  ctx.font      = '5px "Press Start 2P"';
+// ─── Screen renderers ────────────────────────────────────────────
+function drawTitle(ctx, gs) {
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '10px "Press Start 2P"';
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, CANVAS_SIZE - 16);
-  ctx.textAlign = 'left';
-}
-
-function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
-  drawScreenOverlay(ctx, ASSETS.screenSelect);
-
-  var faction  = factions[selFactionIdx];
-  var wrestler = faction.wrestlers[selWrestlerIdx];
-
-  // screenSelect is 1672×941 (16:9) — letterboxes to y=56..200 in 256px canvas
-  var IMG_TOP = 56;
-  var IMG_BOT = 200;
-
-  // ── Top band (y=0..56): faction switcher ─────────────────────────
-  var emblemKey = (faction.name === 'The Rising') ? 'emblemRising' : 'emblemPillars';
-  if (imgReady(ASSETS[emblemKey])) {
-    ctx.drawImage(ASSETS[emblemKey], CANVAS_SIZE - 34, 4, 28, 28);
-  }
-  ctx.font      = '6px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2, IMG_TOP / 2 + 3);
-
-  // ── Bottom band (y=200..256): 4×2 roster with TAS thumbnails ───────
-  var rowH = 26;
-  var colW = 63;
-  ctx.font = '4px "Press Start 2P"';
-  for (var i = 0; i < faction.wrestlers.length; i++) {
-    var wr = faction.wrestlers[i];
-    var col = i % 4;
-    var row = Math.floor(i / 4);
-    var x = 4 + col * colW;
-    var y = IMG_BOT + 4 + row * rowH;
-    var selected = i === selWrestlerIdx;
-
-    if (selected) {
-      ctx.strokeStyle = COLOR_WHITE;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x, y - 2, colW - 5, rowH - 2);
-    }
-
-    drawPortraitThumb(ctx, ASSETS[wr.portraitKey], x + 2, y, 13, 18);
-
-    ctx.textAlign = 'left';
-    ctx.fillStyle = selected ? COLOR_WHITE : '#777777';
-    ctx.fillText((selected ? '>' : ' ') + (wr.label || wr.name), x + 18, y + 8);
-
-    if (selected) {
-      drawTinyStatBar(ctx, 'S', wr.speedMult, x + 18, y + 13);
-      drawTinyStatBar(ctx, 'H', wr.hideMult, x + 38, y + 13);
-    }
-  }
-
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font      = '4px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('L/R:FACTION  U/D:PICK  ENTER:GO', CANVAS_SIZE / 2, CANVAS_SIZE - 3);
-  ctx.textAlign = 'left';
-}
-
-function drawPortraitThumb(ctx, img, x, y, maxW, maxH) {
-  if (!imgReady(img)) {
-    ctx.fillStyle = '#333333';
-    ctx.fillRect(x, y, maxW, maxH);
-    return;
-  }
-  var scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
-  var drawW = Math.max(1, Math.round(img.naturalWidth * scale));
-  var drawH = Math.max(1, Math.round(img.naturalHeight * scale));
-  var dx = x + Math.floor((maxW - drawW) / 2);
-  var dy = y + Math.floor((maxH - drawH) / 2);
-  ctx.drawImage(img, dx, dy, drawW, drawH);
-}
-
-function drawTinyStatBar(ctx, label, value, x, y) {
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.font = '4px "Press Start 2P"';
-  ctx.fillText(label, x, y + 5);
-  ctx.fillStyle = '#44cc44';
-  ctx.fillRect(x + 6, y + 1, Math.round(value * 7), 4);
-}
-
-// drawStatBar — small pixel bar for stats on character select
-// label: 3-char string, value: 0–2 multiplier, x/y: canvas position
-function drawStatBar(ctx, label, value, x, y) {
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.font      = '4px "Press Start 2P"';
-  ctx.textAlign = 'left';
-  ctx.fillText(label, x, y + 4);
-  var barW = Math.round(value * 20); // max ~40px at mult=2
-  ctx.fillStyle = '#44cc44';
-  ctx.fillRect(x + 14, y, barW, 4);
-}
-
-function drawWinScreen(ctx, gs) {
-  var img = (gs.alliesAlive === ALLY_COUNT) ? ASSETS.screenVictory : ASSETS.screenSurvived;
-  drawScreenOverlay(ctx, img);
-
-  ctx.font      = '5px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('ALLIES SAVED: ' + gs.alliesAlive + '/' + ALLY_COUNT, CANVAS_SIZE / 2, 196);
-  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE / 2, 210);
-  ctx.font      = '4px "Press Start 2P"';
+  ctx.fillText('HIDE', CANVAS_SIZE/2, 80);
+  ctx.font = '5px "Press Start 2P"';
   ctx.fillStyle = '#888888';
-  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, 228);
-  ctx.textAlign = 'left';
+  ctx.fillText('A top-down disguise game', CANVAS_SIZE/2, 100);
+  var blink = Math.floor(Date.now() / 500) % 2 === 0;
+  if (blink) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('PRESS ENTER', CANVAS_SIZE/2, 160);
+  }
 }
 
-function drawGameOverScreen(ctx, gs) {
-  var img = (gs.alliesAlive > 0) ? ASSETS.screenFound : ASSETS.screenGameover;
-  drawScreenOverlay(ctx, img);
-
-  var secSurvived = Math.floor((ROUND_TIMER * 1000 - gs.roundTimer) / 1000);
-  ctx.font      = '5px "Press Start 2P"';
+function drawTeamSelect(ctx, gs) {
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '6px "Press Start 2P"';
   ctx.textAlign = 'center';
-  ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('SURVIVED: ' + secSurvived + 's', CANVAS_SIZE / 2, 196);
-  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE / 2, 210);
-  ctx.font      = '4px "Press Start 2P"';
+  ctx.fillText('SELECT TEAM', CANVAS_SIZE/2, 30);
+
+  var teams = gs.teamData;
+  for (var i = 0; i < teams.length; i++) {
+    var tx = i === 0 ? 64 : 192;
+    var selected = gs.selTeamIdx === i;
+    ctx.fillStyle = selected ? teams[i].color : '#444444';
+    ctx.fillRect(tx - 40, 60, 80, 80);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '7px "Press Start 2P"';
+    ctx.fillText(teams[i].name, tx, 108);
+    if (selected) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(tx - 42, 58, 84, 84);
+    }
+  }
+
   ctx.fillStyle = '#888888';
-  ctx.fillText('PRESS ENTER', CANVAS_SIZE / 2, 228);
-  ctx.textAlign = 'left';
+  ctx.font = '4px "Press Start 2P"';
+  ctx.fillText('A/D to choose  ENTER to confirm', CANVAS_SIZE/2, 200);
 }
 
-// ─── Master render function ────────────────────────────────────────
-// Called once per frame from game.js
-// gs: GameState
-function render(ctx, gs) {
-  ctx.save();
-  ctx.scale(RENDER_SCALE, RENDER_SCALE);
-  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+function drawCharSelect(ctx, gs) {
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  var team = gs.teamData[gs.selTeamIdx];
+  ctx.fillStyle = team.color;
+  ctx.font = '6px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText(team.name, CANVAS_SIZE/2, 24);
 
-  switch (gs.screen) {
-    case SCREEN_LOADING:
-      drawLoadingScreen(ctx);
-      break;
-
-    case SCREEN_TITLE:
-      drawTitleScreen(ctx);
-      break;
-
-    case SCREEN_SELECT:
-      drawCharSelectScreen(ctx, gs.factionData, gs.selFactionIdx, gs.selWrestlerIdx);
-      break;
-
-    case SCREEN_GAMEPLAY:
-      renderGameplay(ctx, gs);
-      break;
-
-    case SCREEN_WIN:
-      drawWinScreen(ctx, gs);
-      break;
-
-    case SCREEN_GAMEOVER:
-      drawGameOverScreen(ctx, gs);
-      break;
+  var chars = team.characters;
+  for (var i = 0; i < chars.length; i++) {
+    var col = i % 2;
+    var row = Math.floor(i / 2);
+    var cx  = 64 + col * 128;
+    var cy  = 50 + row * 80;
+    var sel = gs.selCharIdx === i;
+    ctx.fillStyle = sel ? team.color : '#333333';
+    ctx.fillRect(cx - 30, cy, 60, 50);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '8px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText(chars[i].label, cx, cy + 30);
+    ctx.font = '4px "Press Start 2P"';
+    ctx.fillStyle = '#aaaaaa';
+    ctx.fillText('SPD:' + (chars[i].speedMult * 10 | 0), cx - 14, cy + 44);
+    ctx.fillText('HID:' + (chars[i].hideMult  * 10 | 0), cx + 14, cy + 44);
+    if (sel) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(cx - 31, cy - 1, 62, 52);
+    }
   }
 
-  ctx.restore();
+  ctx.fillStyle = '#888888';
+  ctx.font = '4px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('W/S choose  ENTER confirm', CANVAS_SIZE/2, 226);
 }
 
-function renderGameplay(ctx, gs) {
-  var currentRoom = gs.player.room;
+function drawRoomIntro(ctx, gs) {
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText(gs.room.label.toUpperCase(), CANVAS_SIZE/2, CANVAS_SIZE/2 - 8);
+  ctx.font = '5px "Press Start 2P"';
+  ctx.fillStyle = '#888888';
+  ctx.fillText('Get ready...', CANVAS_SIZE/2, CANVAS_SIZE/2 + 10);
+}
 
-  // 1. Tile layer
-  drawRoom(ctx, currentRoom);
-
-  // 2. Hiding spot occupied indicators
-  drawHidingSpots(ctx, gs.hidingSpots, currentRoom);
-
-  // 3. Vision cones (behind entities)
-  for (var i = 0; i < gs.enemies.length; i++) {
-    var en = gs.enemies[i];
-    if (en.screenCol === gs.player.screenCol &&
-        en.screenRow === gs.player.screenRow) {
-      drawVisionCone(ctx, en);
-    }
-  }
-
-  // 4. Allies on current screen
-  for (var j = 0; j < gs.allies.length; j++) {
-    var al = gs.allies[j];
-    if (al.screenCol === gs.player.screenCol &&
-        al.screenRow === gs.player.screenRow) {
-      drawAlly(ctx, al);
-    }
-  }
-
-  // 5. Enemies on current screen
-  for (var k = 0; k < gs.enemies.length; k++) {
-    var e2 = gs.enemies[k];
-    if (e2.screenCol === gs.player.screenCol &&
-        e2.screenRow === gs.player.screenRow) {
-      drawEnemy(ctx, e2, k);
-    }
-  }
-
-  // 6. Player (on top)
+function drawGameplay(ctx, gs) {
+  drawRoom(ctx, gs.room);
+  for (var i = 0; i < gs.allies.length; i++) drawAlly(ctx, gs.allies[i]);
+  // Hunter is hidden during setup — it waits off-screen at hunterEntry
+  if (gs.hunter && gs.phase === PHASE_HUNT) drawHunter(ctx, gs.hunter);
   drawPlayer(ctx, gs.player);
+  drawUI(ctx, gs);
+  drawMiniMap(ctx, gs);
+}
 
-  // 7. Mini-map
-  drawMinimap(ctx, gs);
+function drawWin(ctx, gs) {
+  drawRoom(ctx, gs.room);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.fillStyle = '#44ff44';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('SURVIVED!', CANVAS_SIZE/2, 80);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '6px "Press Start 2P"';
+  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE/2, 110);
+  ctx.font = '4px "Press Start 2P"';
+  ctx.fillStyle = '#aaaaaa';
+  ctx.fillText('PRESS R TO PLAY AGAIN', CANVAS_SIZE/2, 180);
+}
 
-  // 8. HUD
-  drawHUD(ctx, gs);
+function drawGameOver(ctx, gs) {
+  drawRoom(ctx, gs.room);
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  ctx.fillStyle = '#ff2222';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOU WERE FOUND', CANVAS_SIZE/2, 80);
+  ctx.fillStyle = '#888888';
+  ctx.font = '4px "Press Start 2P"';
+  ctx.fillText('PRESS R TO TRY AGAIN', CANVAS_SIZE/2, 180);
+}
+
+// ─── Main render dispatch ─────────────────────────────────────────
+function drawFrame(ctx, gs) {
+  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  switch (gs.screen) {
+    case SCREEN_TITLE:      drawTitle(ctx, gs);      break;
+    case SCREEN_TEAM:       drawTeamSelect(ctx, gs); break;
+    case SCREEN_CHAR:       drawCharSelect(ctx, gs); break;
+    case SCREEN_ROOM_INTRO: drawRoomIntro(ctx, gs);  break;
+    case SCREEN_GAMEPLAY:   drawGameplay(ctx, gs);   break;
+    case SCREEN_WIN:        drawWin(ctx, gs);        break;
+    case SCREEN_GAMEOVER:   drawGameOver(ctx, gs);   break;
+  }
 }

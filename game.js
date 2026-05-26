@@ -1,36 +1,37 @@
-// ─────────────────────────────────────────────────────────────────
-// game.js — GameState, main loop, input, screen transitions, scoring
-// Depends on: constants.js, world.js, entities.js, ai.js, renderer.js
-// ─────────────────────────────────────────────────────────────────
+// game.js — GameState, main loop, input, round management
 
-// ─── Parse embedded JSON once ─────────────────────────────────────
-var RAW_WRESTLERS = JSON.parse(document.getElementById('wrestlers-data').textContent);
-var RAW_ROOMS     = JSON.parse(document.getElementById('rooms-data').textContent);
+// ─── Parse team data ──────────────────────────────────────────────
+var RAW_TEAMS = JSON.parse(document.getElementById('teams-data').textContent);
 
 // ─── GameState ────────────────────────────────────────────────────
 var gs = {
-  screen:         SCREEN_LOADING,
+  screen:     SCREEN_TITLE,
+  phase:      null,
 
-  // Character select state
-  factionData:    RAW_WRESTLERS.factions,
-  selFactionIdx:  0,
-  selWrestlerIdx: 0,
+  // Select screen
+  teamData:    RAW_TEAMS.teams,
+  selTeamIdx:  0,
+  selCharIdx:  0,
 
-  // World
-  grid:        null,  // ScreenGrid
-  hidingSpots: [],    // all HidingSpot objects across all rooms
-
-  // Entities
-  player:  null,
-  enemies: [],
-  allies:  [],
-
-  // Runtime
-  roundTimer:  ROUND_TIMER * 1000,  // ms remaining
+  // Round
+  room:        null,
+  player:      null,
+  hunter:      null,
+  allies:      [],
   alliesAlive: 0,
-  score:       0,
 
-  // Input state
+  // Timers (ms)
+  setupTimer: 0,
+  huntTimer:  0,
+  introTimer: 0,
+
+  // Suspicion
+  suspicion: 0,
+
+  // Scoring
+  score: 0,
+
+  // Input
   keys: {},
   audioStarted: false
 };
@@ -38,462 +39,251 @@ var gs = {
 // ─── Input ────────────────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
   gs.keys[e.code] = true;
+  if (e.code === 'KeyM') toggleMute();
 
-  if (e.code === 'KeyM') {
-    toggleMute();
-  }
-
-  // Title screen
   if (gs.screen === SCREEN_TITLE) {
-    if (!gs.audioStarted) {
-      initAudio();
-      playMusic('menu');
-      gs.audioStarted = true;
-    }
-    if (e.code === 'Enter') {
-      gs.screen = SCREEN_SELECT;
-    }
+    if (!gs.audioStarted) { initAudio(); playMusic('menu'); gs.audioStarted = true; }
+    if (e.code === 'Enter') gs.screen = SCREEN_TEAM;
     return;
   }
 
-  // Character select screen
-  if (gs.screen === SCREEN_SELECT) {
-    var fLen = gs.factionData.length;
-    var wLen = gs.factionData[gs.selFactionIdx].wrestlers.length;
-
-    if (e.code === 'ArrowLeft'  || e.code === 'KeyA') {
-      gs.selFactionIdx  = (gs.selFactionIdx  - 1 + fLen) % fLen;
-      gs.selWrestlerIdx = 0;
-    }
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') {
-      gs.selFactionIdx  = (gs.selFactionIdx  + 1) % fLen;
-      gs.selWrestlerIdx = 0;
-    }
-    if (e.code === 'ArrowUp'    || e.code === 'KeyW') {
-      gs.selWrestlerIdx = (gs.selWrestlerIdx - 1 + wLen) % wLen;
-    }
-    if (e.code === 'ArrowDown'  || e.code === 'KeyS') {
-      gs.selWrestlerIdx = (gs.selWrestlerIdx + 1) % wLen;
-    }
-    if (e.code === 'Enter') {
-      startGame();
-    }
+  if (gs.screen === SCREEN_TEAM) {
+    var tLen = gs.teamData.length;
+    if (e.code === 'ArrowLeft'  || e.code === 'KeyA') gs.selTeamIdx = (gs.selTeamIdx - 1 + tLen) % tLen;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') gs.selTeamIdx = (gs.selTeamIdx + 1) % tLen;
+    if (e.code === 'Enter') { gs.selCharIdx = 0; gs.screen = SCREEN_CHAR; }
     return;
   }
 
-  // Win/Game Over screens
+  if (gs.screen === SCREEN_CHAR) {
+    var cLen = gs.teamData[gs.selTeamIdx].characters.length;
+    if (e.code === 'ArrowUp'   || e.code === 'KeyW') gs.selCharIdx = (gs.selCharIdx - 1 + cLen) % cLen;
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') gs.selCharIdx = (gs.selCharIdx + 1) % cLen;
+    if (e.code === 'Enter') startRound();
+    return;
+  }
+
   if (gs.screen === SCREEN_WIN || gs.screen === SCREEN_GAMEOVER) {
-    if (e.code === 'Enter') {
-      gs.screen         = SCREEN_TITLE;
-      gs.selFactionIdx  = 0;
-      gs.selWrestlerIdx = 0;
+    if (e.code === 'KeyR' || e.code === 'Enter') {
+      gs.screen = SCREEN_TITLE;
+      gs.selTeamIdx = 0;
+      gs.selCharIdx = 0;
     }
     return;
   }
 
-  // Gameplay — hide/unhide on Space
   if (gs.screen === SCREEN_GAMEPLAY) {
+    // Transform / untransform
     if (e.code === 'Space') {
-      handleHideToggle();
+      handleTransformToggle();
+      e.preventDefault();
+    }
+    // Cycle object
+    if (e.code === 'KeyQ') cycleObject(-1);
+    if (e.code === 'KeyE') cycleObject(1);
+    // Number keys 1–8
+    if (e.code.startsWith('Digit')) {
+      var n = parseInt(e.code.replace('Digit', ''), 10);
+      if (n >= 1 && n <= OBJECTS.length) setObject(n - 1);
     }
   }
 });
 
-document.addEventListener('keyup', function(e) {
-  gs.keys[e.code] = false;
-});
+document.addEventListener('keyup', function(e) { gs.keys[e.code] = false; });
 
-// ─── Hide toggle ──────────────────────────────────────────────────
-function handleHideToggle() {
+// ─── Transform helpers ────────────────────────────────────────────
+function handleTransformToggle() {
   var player = gs.player;
+  if (!player.alive) return;
 
-  if (player.isHidden) {
-    // Unhide
-    player.hidingSpot.isOccupied = false;
-    player.hidingSpot.occupant   = null;
-    player.hidingSpot            = null;
-    player.isHidden              = false;
-    return;
-  }
-
-  // Find nearest unoccupied hiding spot within 1 tile
-  var best     = null;
-  var bestDist = (TILE_SIZE + 1); // 1 tile threshold in pixels
-  for (var i = 0; i < gs.hidingSpots.length; i++) {
-    var hs = gs.hidingSpots[i];
-    if (hs.room !== player.room) continue;
-    if (hs.isOccupied) continue;
-    var dx = (player.x + player.width  / 2) - hs.cx;
-    var dy = (player.y + player.height / 2) - hs.cy;
-    var d  = Math.sqrt(dx * dx + dy * dy);
-    if (d < bestDist) {
-      bestDist = d;
-      best = hs;
+  if (player.isTransformed) {
+    player.isTransformed = false;
+    // Penalty for retransforming during hunt
+    if (gs.phase === PHASE_HUNT) {
+      gs.suspicion = Math.min(SUSPICION_MAX, gs.suspicion + SUSPICION_RETRANSFORM);
+      player.retransformed = true;
     }
-  }
-
-  if (best) {
-    player.isHidden              = true;
-    player.hidingSpot            = best;
-    best.isOccupied              = true;
-    best.occupant                = player;
-    // Snap to spot center
-    player.x = best.cx - player.width  / 2;
-    player.y = best.cy - player.height / 2;
+  } else {
+    player.isTransformed = true;
   }
 }
 
-// ─── Game Init ────────────────────────────────────────────────────
-function startGame() {
-  // Build world
-  gs.grid = new ScreenGrid(RAW_ROOMS);
+function cycleObject(dir) {
+  if (gs.player.isTransformed) return; // locked while transformed
+  setObject((gs.player.objIdx + dir + OBJECTS.length) % OBJECTS.length);
+}
 
-  // Collect all hiding spots from all rooms
-  gs.hidingSpots = [];
-  for (var row = 0; row < GRID_SIZE; row++) {
-    for (var col = 0; col < GRID_SIZE; col++) {
-      var room = gs.grid.getRoom(col, row);
-      if (room) {
-        var spots = buildHidingSpotsForRoom(room);
-        for (var s = 0; s < spots.length; s++) {
-          gs.hidingSpots.push(spots[s]);
-        }
-      }
-    }
-  }
+function setObject(idx) {
+  if (gs.player.isTransformed) return;
+  gs.player.objIdx = idx;
+}
 
-  // Create player — always starts in locker_room_tl
-  var faction  = gs.factionData[gs.selFactionIdx];
-  var wrestler = faction.wrestlers[gs.selWrestlerIdx];
-  var startRoom = gs.grid.getRoom(0, 0);
-  gs.player    = new Player(wrestler, faction, startRoom);
+// ─── Round init ───────────────────────────────────────────────────
+function startRound() {
+  // Pick random room
+  var roomId = ROOM_IDS[Math.floor(Math.random() * ROOM_IDS.length)];
+  gs.room = ROOMS[roomId];
 
-  // Create enemies — distribute across center screens
-  gs.enemies = [];
-  var enemyRooms = [
-    gs.grid.getRoom(1, 1),
-    gs.grid.getRoom(2, 1),
-    gs.grid.getRoom(1, 2),
-    gs.grid.getRoom(2, 2)
-  ];
-  for (var e = 0; e < ENEMY_COUNT; e++) {
-    var eRoom = enemyRooms[e % enemyRooms.length];
-    if (eRoom) {
-      gs.enemies.push(new Enemy(eRoom, eRoom.patrolPoints));
-    }
-  }
+  // Teams
+  var playerTeam  = gs.teamData[gs.selTeamIdx];
+  var playerChar  = playerTeam.characters[gs.selCharIdx];
+  var hunterTeam  = gs.teamData[1 - gs.selTeamIdx]; // opposing team
 
-  // Create allies — distribute across rooms with spawn points
+  // Player
+  gs.player = new Player(playerTeam, playerChar);
+  gs.player.x = gs.room.playerSpawn.x - gs.player.width  / 2;
+  gs.player.y = gs.room.playerSpawn.y - gs.player.height / 2;
+  clampToField(gs.player);
+
+  // Hunter (created but placed off-screen; enters during hunt phase)
+  gs.hunter = new Hunter(hunterTeam, gs.room);
+
+  // Allies
   gs.allies = [];
-  var allyRooms = [];
-  for (var ar = 0; ar < GRID_SIZE; ar++) {
-    for (var ac = 0; ac < GRID_SIZE; ac++) {
-      var r = gs.grid.getRoom(ac, ar);
-      if (r && r.spawnPoints && r.spawnPoints.length > 0) {
-        allyRooms.push(r);
-      }
-    }
+  var spawns = gs.room.allySpawns;
+  for (var i = 0; i < spawns.length && i < 2; i++) {
+    var ally = new Ally(playerTeam, spawns[i]);
+    // Pick a random object and believable zone destination
+    ally.objIdx = Math.floor(Math.random() * OBJECTS.length);
+    var dest = pickAllyDest(ally, gs.room);
+    ally.destX = dest.x;
+    ally.destY = dest.y;
+    gs.allies.push(ally);
   }
-  var allyCount = 0;
-  for (var ai = 0; ai < allyRooms.length && allyCount < ALLY_COUNT; ai++) {
-    var aRoom = allyRooms[ai];
-    for (var sp = 0; sp < aRoom.spawnPoints.length && allyCount < ALLY_COUNT; sp++) {
-      gs.allies.push(new Ally(aRoom, aRoom.spawnPoints[sp]));
-      allyCount++;
-    }
-  }
-
-  // Reset runtime
-  gs.roundTimer  = ROUND_TIMER * 1000;
   gs.alliesAlive = gs.allies.length;
-  gs.score       = 0;
+
+  // Reset state
+  gs.suspicion  = 0;
+  gs.score      = 0;
+  gs.setupTimer = SETUP_TIMER * 1000;
+  gs.huntTimer  = HUNT_TIMER  * 1000;
+  gs.introTimer = ROOM_INTRO_MS;
+  gs.phase      = null;
 
   playMusic('gameplay');
-  gs.screen = SCREEN_GAMEPLAY;
+  gs.screen = SCREEN_ROOM_INTRO;
 }
 
-// ─── Animation helpers ────────────────────────────────────────────
-// Maps facingAngle (radians, atan2 convention) to sprite sheet row:
-// 0=down, 1=left, 2=right, 3=up
-function angleToDir(angle) {
-  var PI4 = Math.PI / 4;
-  if (angle > -PI4   && angle <= PI4)      return 2; // right
-  if (angle > PI4    && angle <= 3 * PI4)  return 0; // down
-  if (angle > -3*PI4 && angle <= -PI4)     return 3; // up
-  return 1;                                           // left
-}
-
-// Advances animFrame when moving; snaps to frame 0 when still.
-// Updates facingRight when direction is left or right (persists through up/down).
-function tickAnim(entity, dt, frameMs) {
-  entity.animDir = angleToDir(entity.facingAngle);
-  if (entity.animDir === 2) entity.facingRight = true;
-  if (entity.animDir === 1) entity.facingRight = false;
-  if (!entity.isMoving) {
-    entity.animFrame = 0;
-    entity.animTimer = frameMs;
-    return;
+// Pick a destination pixel inside a believable zone for ally's object.
+// Falls back to allySpawn if no zone matches.
+function pickAllyDest(ally, room) {
+  var obj     = OBJECTS[ally.objIdx];
+  var zones   = room.zones;
+  var matches = [];
+  for (var i = 0; i < zones.length; i++) {
+    if (zones[i].believableObjects.indexOf(obj.id) !== -1) {
+      matches.push(zones[i]);
+    }
   }
-  entity.animTimer -= dt;
-  if (entity.animTimer <= 0) {
-    entity.animFrame  = (entity.animFrame + 1) % WALK_FRAMES;
-    entity.animTimer += frameMs;
-  }
+  if (matches.length === 0) return {x: ally.x + ally.width/2, y: ally.y + ally.height/2};
+  var z = matches[Math.floor(Math.random() * matches.length)];
+  var px = z.x + 4 + Math.random() * Math.max(0, z.w - 8);
+  var py = z.y + 4 + Math.random() * Math.max(0, z.h - 8);
+  return {x: Math.round(px), y: Math.round(py)};
 }
 
 // ─── Player movement ──────────────────────────────────────────────
 function updatePlayer(dt) {
-  var player = gs.player;
-  player.isMoving = false;
-  if (player.isHidden) return; // movement locked while hiding
-
-  var dx = 0;
-  var dy = 0;
-
-  if (gs.keys['ArrowLeft']  || gs.keys['KeyA']) { dx -= player.speed; }
-  if (gs.keys['ArrowRight'] || gs.keys['KeyD']) { dx += player.speed; }
-  if (gs.keys['ArrowUp']    || gs.keys['KeyW']) { dy -= player.speed; }
-  if (gs.keys['ArrowDown']  || gs.keys['KeyS']) { dy += player.speed; }
+  var p = gs.player;
+  p.isMoving = false;
+  var dx = 0, dy = 0;
+  if (gs.keys['ArrowLeft']  || gs.keys['KeyA']) dx -= p.speed;
+  if (gs.keys['ArrowRight'] || gs.keys['KeyD']) dx += p.speed;
+  if (gs.keys['ArrowUp']    || gs.keys['KeyW']) dy -= p.speed;
+  if (gs.keys['ArrowDown']  || gs.keys['KeyS']) dy += p.speed;
 
   if (dx !== 0 || dy !== 0) {
-    player.isMoving = true;
-    // Normalize diagonal movement
-    if (dx !== 0 && dy !== 0) {
-      dx *= 0.707;
-      dy *= 0.707;
-    }
-    player.facingAngle = Math.atan2(dy, dx);
-    moveWithCollision(player, dx, dy);
-  }
-
-  // ─── Screen transition ────────────────────────────────────────
-  checkScreenTransition(player);
-}
-
-// checkScreenTransition — teleports player (and chasing enemies) to new screen
-function checkScreenTransition(player) {
-  var newCol = player.screenCol;
-  var newRow = player.screenRow;
-  var newX   = player.x;
-  var newY   = player.y;
-  var crossed = false;
-
-  var midTileCol = Math.floor((player.x + player.width  / 2) / TILE_SIZE);
-  var midTileRow = Math.floor((player.y + player.height / 2) / TILE_SIZE);
-
-  if (player.x <= 0 &&
-      player.room.isPassable(0, midTileRow)) {
-    newCol--;
-    newX    = CANVAS_SIZE - player.width - 1;
-    crossed = true;
-  } else if (player.x + player.width >= CANVAS_SIZE &&
-             player.room.isPassable(SCREEN_TILES - 1, midTileRow)) {
-    newCol++;
-    newX    = 1;
-    crossed = true;
-  } else if (player.y <= 0 &&
-             player.room.isPassable(midTileCol, 0)) {
-    newRow--;
-    newY    = CANVAS_SIZE - player.height - 1;
-    crossed = true;
-  } else if (player.y + player.height >= CANVAS_SIZE &&
-             player.room.isPassable(midTileCol, SCREEN_TILES - 1)) {
-    newRow++;
-    newY    = 1;
-    crossed = true;
-  }
-
-  if (!crossed) return;
-
-  var destRoom = gs.grid.getRoom(newCol, newRow);
-  if (!destRoom) return;
-
-  player.screenCol = newCol;
-  player.screenRow = newRow;
-  player.room      = destRoom;
-  player.x         = newX;
-  player.y         = newY;
-
-  for (var i = 0; i < gs.enemies.length; i++) {
-    var en = gs.enemies[i];
-    if (en.isChasing) {
-      en.screenCol = newCol;
-      en.screenRow = newRow;
-      en.room      = destRoom;
-      en.x         = CANVAS_SIZE / 2;
-      en.y         = CANVAS_SIZE / 2;
-    }
+    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+    p.facingAngle = Math.atan2(dy, dx);
+    p.x += dx; p.y += dy;
+    p.isMoving = true;
+    clampToField(p);
   }
 }
 
-// ─── Entity updates ───────────────────────────────────────────────
-function updateEntities(dt) {
-  // Enemies — all screens every frame
-  for (var i = 0; i < gs.enemies.length; i++) {
-    updateEnemy(gs.enemies[i], gs.player, gs.grid, dt);
+// ─── Phase updates ────────────────────────────────────────────────
+function updateSetup(dt) {
+  gs.setupTimer -= dt;
+  updatePlayer(dt);
 
-    // Catch check
-    if (enemyTouchesPlayer(gs.enemies[i], gs.player)) {
-      gs.screen = SCREEN_GAMEOVER;
-      playMusic('gameover');
-      return;
-    }
+  // Ally movement during setup
+  for (var i = 0; i < gs.allies.length; i++) {
+    updateAllySetup(gs.allies[i]);
   }
 
-  // Allies — all screens every frame
-  for (var j = 0; j < gs.allies.length; j++) {
-    var ally = gs.allies[j];
-    if (ally.state === STATE_CAUGHT) continue;
-
-    // Collect hiding spots on ally's screen
-    var allySpots = [];
-    for (var k = 0; k < gs.hidingSpots.length; k++) {
-      var hs = gs.hidingSpots[k];
-      if (hs.room === ally.room) allySpots.push(hs);
-    }
-
-    updateAlly(ally, gs.enemies, allySpots, dt);
-  }
-
-  // Recount alive allies
-  var alive = 0;
-  for (var m = 0; m < gs.allies.length; m++) {
-    if (gs.allies[m].alive) alive++;
-  }
-  gs.alliesAlive = alive;
-
-  // Tick animations
-  tickAnim(gs.player, dt, ANIM_WALK_FRAME_MS);
-
-  for (var ei = 0; ei < gs.enemies.length; ei++) {
-    gs.enemies[ei].isMoving = true;
-    tickAnim(gs.enemies[ei], dt, ANIM_ENEMY_FRAME_MS);
-  }
-
-  for (var ali = 0; ali < gs.allies.length; ali++) {
-    var alEnt = gs.allies[ali];
-    alEnt.isMoving = (alEnt.state === STATE_WANDERING || alEnt.state === STATE_FLEEING);
-    tickAnim(alEnt, dt, ANIM_WALK_FRAME_MS);
+  if (gs.setupTimer <= 0) {
+    gs.phase = PHASE_HUNT;
+    gs.huntTimer = HUNT_TIMER * 1000;
   }
 }
 
-// ─── Scoring ──────────────────────────────────────────────────────
-function updateScore(dt) {
-  // Survival score — per second
-  gs.score += (dt / 1000) * SCORE_PER_SECOND;
+function updateHunt(dt) {
+  gs.huntTimer -= dt;
+  updatePlayer(dt);
+  if (gs.hunter) updateHunter(gs.hunter, dt, gs);
+  tickSuspicion(dt, gs);
+
+  // Win
+  if (gs.huntTimer <= 0) {
+    endRound(true);
+    return;
+  }
+  // Lose
+  if (gs.suspicion >= SUSPICION_MAX) {
+    endRound(false);
+  }
+}
+
+function endRound(survived) {
+  if (survived) {
+    // Calculate score
+    var s = SCORE_BASE;
+    var secondsSurvived = Math.round((HUNT_TIMER * 1000 - gs.huntTimer) / 1000);
+    s += secondsSurvived * SCORE_PER_SECOND;
+    s += gs.alliesAlive * SCORE_ALLY_BONUS;
+    if (!gs.player.movedWhileTransformed)  s += SCORE_STILL_BONUS;
+    if (!gs.player.retransformed)          s += SCORE_NO_RETRANSFORM;
+    if (gs.player.wasInGoodZone)           s += SCORE_GOOD_ZONE_BONUS;
+    gs.score = s;
+    playMusic('win');
+    gs.screen = SCREEN_WIN;
+  } else {
+    gs.score  = 0;
+    playMusic('gameover');
+    gs.screen = SCREEN_GAMEOVER;
+  }
 }
 
 // ─── Main loop ────────────────────────────────────────────────────
-var lastTime = 0;
+var canvas = document.getElementById('gameCanvas');
+var ctx    = canvas.getContext('2d');
 
-function tickGame(dt) {
-  if (gs.screen === SCREEN_LOADING) {
-    if (assetsReady()) {
-      gs.screen = SCREEN_TITLE;
-    }
-  } else if (gs.screen === SCREEN_GAMEPLAY) {
-    // Tick timer
-    gs.roundTimer -= dt;
+// 3× CSS scale
+canvas.style.width  = (CANVAS_SIZE * 3) + 'px';
+canvas.style.height = (CANVAS_SIZE * 3) + 'px';
 
-    if (gs.roundTimer <= 0) {
-      // Win!
-      gs.roundTimer = 0;
-      gs.score += gs.alliesAlive * SCORE_PER_ALLY;
-      if (gs.alliesAlive === ALLY_COUNT) {
-        gs.score += SCORE_FULL_SURVIVAL;
-      }
-      gs.score  = Math.floor(gs.score);
-      gs.screen = SCREEN_WIN;
-      playMusic('win');
-    } else {
-      updateScore(dt);
-      updatePlayer(dt);
-      updateEntities(dt);
+var _lastTime = 0;
+
+function loop(ts) {
+  var dt = Math.min(ts - _lastTime, 50); // cap at 50ms / ~20fps minimum
+  _lastTime = ts;
+
+  // Screen transitions that need timer ticks
+  if (gs.screen === SCREEN_ROOM_INTRO) {
+    gs.introTimer -= dt;
+    if (gs.introTimer <= 0) {
+      gs.phase = PHASE_SETUP;
+      gs.screen = SCREEN_GAMEPLAY;
     }
   }
-}
 
-function renderGame() {
-  var canvas = document.getElementById('gameCanvas');
-  var ctx    = canvas.getContext('2d');
-  render(ctx, gs);
-}
-
-function gameLoop(timestamp) {
-  var dt = Math.min(timestamp - lastTime, 50); // cap at 50ms to avoid spiral
-  lastTime = timestamp;
-
-  tickGame(dt);
-  renderGame();
-
-  requestAnimationFrame(gameLoop);
-}
-
-function renderGameToText() {
-  var payload = {
-    coordinateSystem: 'origin top-left, x right, y down, pixels',
-    screen: gs.screen,
-    muted: isMuted(),
-    selected: {
-      faction: gs.factionData[gs.selFactionIdx].name,
-      wrestler: gs.factionData[gs.selFactionIdx].wrestlers[gs.selWrestlerIdx].name
-    },
-    roundTimerMs: Math.round(gs.roundTimer),
-    score: Math.floor(gs.score),
-    alliesAlive: gs.alliesAlive
-  };
-
-  if (gs.player) {
-    payload.player = {
-      x: Math.round(gs.player.x),
-      y: Math.round(gs.player.y),
-      room: gs.player.room.id,
-      screenCol: gs.player.screenCol,
-      screenRow: gs.player.screenRow,
-      hidden: gs.player.isHidden
-    };
+  if (gs.screen === SCREEN_GAMEPLAY) {
+    if      (gs.phase === PHASE_SETUP) updateSetup(dt);
+    else if (gs.phase === PHASE_HUNT)  updateHunt(dt);
   }
 
-  payload.enemies = gs.enemies.map(function(enemy) {
-    return {
-      x: Math.round(enemy.x),
-      y: Math.round(enemy.y),
-      room: enemy.room.id,
-      state: enemy.state
-    };
-  });
-
-  return JSON.stringify(payload);
+  drawFrame(ctx, gs);
+  requestAnimationFrame(loop);
 }
 
-window.render_game_to_text = renderGameToText;
-
-window.advanceTime = function(ms) {
-  var step = 1000 / 60;
-  var remaining = Math.max(0, ms || 0);
-  var steps = Math.max(1, Math.ceil(remaining / step));
-  for (var i = 0; i < steps; i++) {
-    tickGame(Math.min(step, remaining || step));
-    remaining -= step;
-  }
-  renderGame();
-};
-
-// ─── Canvas setup — integer scale, DPR-aware ──────────────────────
-(function setupCanvas() {
-  var canvas = document.getElementById('gameCanvas');
-  var dpr    = window.devicePixelRatio || 1;
-  var css    = Math.min(window.innerWidth, window.innerHeight);
-  RENDER_SCALE = Math.max(1, Math.floor(css * dpr / CANVAS_SIZE));
-  var phys   = CANVAS_SIZE * RENDER_SCALE;
-  canvas.width  = phys;
-  canvas.height = phys;
-  canvas.style.width  = (phys / dpr) + 'px';
-  canvas.style.height = (phys / dpr) + 'px';
-})();
-
-// ─── Boot ─────────────────────────────────────────────────────────
-requestAnimationFrame(function(ts) {
-  lastTime = ts;
-  gameLoop(ts);
-});
+requestAnimationFrame(loop);
