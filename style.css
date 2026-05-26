@@ -20,6 +20,4 @@ canvas {
   display: block;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  width: min(100vw, 100vh);
-  height: min(100vw, 100vh);
 }

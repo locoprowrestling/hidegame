@@ -3,7 +3,7 @@ var TILE_SIZE        = 16;   // pixels per tile (game-logic units)
 var SCREEN_TILES     = 16;   // tiles per screen dimension → 256×256 px canvas
 var GRID_SIZE        = 4;    // 4×4 screen grid
 var CANVAS_SIZE      = TILE_SIZE * SCREEN_TILES; // 256 — game-logic size
-var RENDER_SCALE     = 3;    // canvas physical pixels = CANVAS_SIZE * RENDER_SCALE
+var RENDER_SCALE     = 1;    // overwritten at boot by setupCanvas() in game.js
 
 // ─── Minimap ──────────────────────────────────────────────────
 var MINIMAP_SIZE     = 64;   // px — full minimap square

@@ -409,6 +409,19 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
+// ─── Canvas setup — integer scale, DPR-aware ──────────────────────
+(function setupCanvas() {
+  var canvas = document.getElementById('gameCanvas');
+  var dpr    = window.devicePixelRatio || 1;
+  var css    = Math.min(window.innerWidth, window.innerHeight);
+  RENDER_SCALE = Math.max(1, Math.floor(css * dpr / CANVAS_SIZE));
+  var phys   = CANVAS_SIZE * RENDER_SCALE;
+  canvas.width  = phys;
+  canvas.height = phys;
+  canvas.style.width  = (phys / dpr) + 'px';
+  canvas.style.height = (phys / dpr) + 'px';
+})();
+
 // ─── Boot ─────────────────────────────────────────────────────────
 requestAnimationFrame(function(ts) {
   lastTime = ts;
