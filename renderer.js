@@ -449,6 +449,8 @@ function drawGameOverScreen(ctx, gs) {
 // Called once per frame from game.js
 // gs: GameState
 function render(ctx, gs) {
+  ctx.save();
+  ctx.scale(RENDER_SCALE, RENDER_SCALE);
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
   switch (gs.screen) {
@@ -476,6 +478,8 @@ function render(ctx, gs) {
       drawGameOverScreen(ctx, gs);
       break;
   }
+
+  ctx.restore();
 }
 
 function renderGameplay(ctx, gs) {
