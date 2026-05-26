@@ -367,38 +367,47 @@ function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
   var faction  = factions[selFactionIdx];
   var wrestler = faction.wrestlers[selWrestlerIdx];
 
+  // screenSelect is 1672×941 (16:9) — letterboxes to y=56..200 in 256px canvas
+  var IMG_TOP = 56;
+  var IMG_BOT = 200;
+
+  // ── Top band (y=0..56): faction switcher ─────────────────────────
   var emblemKey = (faction.name === 'The Rising') ? 'emblemRising' : 'emblemPillars';
   if (imgReady(ASSETS[emblemKey])) {
-    ctx.drawImage(ASSETS[emblemKey], CANVAS_SIZE - 36, 16, 24, 24);
+    ctx.drawImage(ASSETS[emblemKey], CANVAS_SIZE - 34, 4, 28, 28);
   }
-
-  var pConfig  = PLAYER_SHEETS[wrestler.name] || PLAYER_SHEET_DEFAULT;
-  var pImg     = ASSETS[pConfig.key];
-  if (imgReady(pImg)) {
-    drawSpriteFrame(ctx, pImg, 0, pConfig.frameW, PLAYER_SHEET_FRAME_H, CANVAS_SIZE - 58, 40, 48, 64, false);
-  }
-
   ctx.font      = '6px "Press Start 2P"';
   ctx.textAlign = 'center';
   ctx.fillStyle = COLOR_WHITE;
-  ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2 - 20, 20);
+  ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2, IMG_TOP / 2 + 3);
 
+  // ── Image band (y=56..200): wrestler preview sprite ───────────────
+  var pConfig = PLAYER_SHEETS[wrestler.name] || PLAYER_SHEET_DEFAULT;
+  var pImg    = ASSETS[pConfig.key];
+  if (imgReady(pImg)) {
+    drawSpriteFrame(ctx, pImg, 0, pConfig.frameW, PLAYER_SHEET_FRAME_H,
+                   CANVAS_SIZE - 60, IMG_TOP + 2, 54, 76, false);
+  }
+
+  // ── Bottom band (y=200..256): wrestler picker + stats ────────────
+  var rowH = 12;
   ctx.font = '5px "Press Start 2P"';
   for (var i = 0; i < faction.wrestlers.length; i++) {
     var wr = faction.wrestlers[i];
-    var y  = 44 + i * 20;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = (i === selWrestlerIdx) ? faction.color : '#888888';
-    ctx.fillText((i === selWrestlerIdx ? '> ' : '  ') + wr.name, CANVAS_SIZE / 2 - 20, y);
+    var y  = IMG_BOT + 8 + i * rowH;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = (i === selWrestlerIdx) ? COLOR_WHITE : '#666666';
+    ctx.fillText((i === selWrestlerIdx ? '>' : ' ') + ' ' + wr.name, 8, y);
     if (i === selWrestlerIdx) {
-      drawStatBar(ctx, 'SPD', wr.speedMult, 20, y + 8);
-      drawStatBar(ctx, 'HID', wr.hideMult, 100, y + 8);
+      drawStatBar(ctx, 'SPD', wr.speedMult, 110, y - 4);
+      drawStatBar(ctx, 'HID', wr.hideMult, 178, y - 4);
     }
   }
 
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font      = '4px "Press Start 2P"';
-  ctx.fillText('L/R:FACTION  U/D:PICK  ENTER:GO', CANVAS_SIZE / 2 - 20, CANVAS_SIZE - 10);
+  ctx.textAlign = 'center';
+  ctx.fillText('L/R:FACTION  U/D:PICK  ENTER:GO', CANVAS_SIZE / 2, CANVAS_SIZE - 3);
   ctx.textAlign = 'left';
 }
 
