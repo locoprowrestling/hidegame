@@ -396,15 +396,14 @@ function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
   ctx.fillStyle = COLOR_WHITE;
   ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2, IMG_TOP / 2 + 3);
 
-  // ── Image band (y=56..200): wrestler preview sprite ───────────────
+  // ── Bottom band (y=200..256): wrestler picker + stats ────────────
   var pConfig = PLAYER_SHEETS[wrestler.name] || PLAYER_SHEET_DEFAULT;
   var pImg    = ASSETS[pConfig.key];
   if (imgReady(pImg)) {
     drawSpriteFrame(ctx, pImg, 0, pConfig.frameW, PLAYER_SHEET_FRAME_H,
-                   CANVAS_SIZE - 60, IMG_TOP + 2, 54, 76, false);
+                   CANVAS_SIZE - 30, IMG_BOT + 4, 22, 33, false);
   }
 
-  // ── Bottom band (y=200..256): wrestler picker + stats ────────────
   var rowH = 12;
   ctx.font = '5px "Press Start 2P"';
   for (var i = 0; i < faction.wrestlers.length; i++) {
