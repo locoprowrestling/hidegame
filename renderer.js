@@ -396,25 +396,33 @@ function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
   ctx.fillStyle = COLOR_WHITE;
   ctx.fillText('< ' + faction.name + ' >', CANVAS_SIZE / 2, IMG_TOP / 2 + 3);
 
-  // ── Bottom band (y=200..256): wrestler picker + stats ────────────
-  var pConfig = PLAYER_SHEETS[wrestler.name] || PLAYER_SHEET_DEFAULT;
-  var pImg    = ASSETS[pConfig.key];
-  if (imgReady(pImg)) {
-    drawSpriteFrame(ctx, pImg, 0, pConfig.frameW, PLAYER_SHEET_FRAME_H,
-                   CANVAS_SIZE - 30, IMG_BOT + 4, 22, 33, false);
-  }
-
-  var rowH = 12;
-  ctx.font = '5px "Press Start 2P"';
+  // ── Bottom band (y=200..256): 4×2 roster with TAS thumbnails ───────
+  var rowH = 26;
+  var colW = 63;
+  ctx.font = '4px "Press Start 2P"';
   for (var i = 0; i < faction.wrestlers.length; i++) {
     var wr = faction.wrestlers[i];
-    var y  = IMG_BOT + 8 + i * rowH;
+    var col = i % 4;
+    var row = Math.floor(i / 4);
+    var x = 4 + col * colW;
+    var y = IMG_BOT + 4 + row * rowH;
+    var selected = i === selWrestlerIdx;
+
+    if (selected) {
+      ctx.strokeStyle = COLOR_WHITE;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, y - 2, colW - 5, rowH - 2);
+    }
+
+    drawPortraitThumb(ctx, ASSETS[wr.portraitKey], x + 2, y, 13, 18);
+
     ctx.textAlign = 'left';
-    ctx.fillStyle = (i === selWrestlerIdx) ? COLOR_WHITE : '#666666';
-    ctx.fillText((i === selWrestlerIdx ? '>' : ' ') + ' ' + wr.name, 8, y);
-    if (i === selWrestlerIdx) {
-      drawStatBar(ctx, 'SPD', wr.speedMult, 110, y - 4);
-      drawStatBar(ctx, 'HID', wr.hideMult, 178, y - 4);
+    ctx.fillStyle = selected ? COLOR_WHITE : '#777777';
+    ctx.fillText((selected ? '>' : ' ') + (wr.label || wr.name), x + 18, y + 8);
+
+    if (selected) {
+      drawTinyStatBar(ctx, 'S', wr.speedMult, x + 18, y + 13);
+      drawTinyStatBar(ctx, 'H', wr.hideMult, x + 38, y + 13);
     }
   }
 
@@ -423,6 +431,28 @@ function drawCharSelectScreen(ctx, factions, selFactionIdx, selWrestlerIdx) {
   ctx.textAlign = 'center';
   ctx.fillText('L/R:FACTION  U/D:PICK  ENTER:GO', CANVAS_SIZE / 2, CANVAS_SIZE - 3);
   ctx.textAlign = 'left';
+}
+
+function drawPortraitThumb(ctx, img, x, y, maxW, maxH) {
+  if (!imgReady(img)) {
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(x, y, maxW, maxH);
+    return;
+  }
+  var scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight);
+  var drawW = Math.max(1, Math.round(img.naturalWidth * scale));
+  var drawH = Math.max(1, Math.round(img.naturalHeight * scale));
+  var dx = x + Math.floor((maxW - drawW) / 2);
+  var dy = y + Math.floor((maxH - drawH) / 2);
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+}
+
+function drawTinyStatBar(ctx, label, value, x, y) {
+  ctx.fillStyle = COLOR_WHITE;
+  ctx.font = '4px "Press Start 2P"';
+  ctx.fillText(label, x, y + 5);
+  ctx.fillStyle = '#44cc44';
+  ctx.fillRect(x + 6, y + 1, Math.round(value * 7), 4);
 }
 
 // drawStatBar — small pixel bar for stats on character select

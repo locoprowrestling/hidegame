@@ -38,6 +38,24 @@ loadImage('sheetNicky',  'Assets/players-web/spritesheets/nicky.png');
 loadImage('sheetFranky', 'Assets/players-web/spritesheets/franky.png');
 loadImage('sheetAlly',   'Assets/players-web/spritesheets/anuka.png');
 
+// ─── Character select portraits (TAS images) ─────────────────────
+loadImage('portraitAnuka',    'Assets/players-web/tas-anuka-gutierrez.png');
+loadImage('portraitAvalon',   'Assets/players-web/tas-avalon.png');
+loadImage('portraitCarter',   'Assets/players-web/tas-carter-cash.png');
+loadImage('portraitCodah',    'Assets/players-web/tas-codah.png');
+loadImage('portraitCody',     'Assets/players-web/tas-cody-devine.png');
+loadImage('portraitDean',     'Assets/players-web/tas-dean-mercer.png');
+loadImage('portraitErza',     'Assets/players-web/tas-erza.png');
+loadImage('portraitFranky',   'Assets/players-web/tas-franky-gonzales.png');
+loadImage('portraitHussy',    'Assets/players-web/tas-hussy.png');
+loadImage('portraitJohnny',   'Assets/players-web/tas-johnny-crash.png');
+loadImage('portraitJT',       'Assets/players-web/tas-jt-staten.png');
+loadImage('portraitGlory',    'Assets/players-web/tas-major-glory.png');
+loadImage('portraitMorgana',  'Assets/players-web/tas-morgana-lavey.png');
+loadImage('portraitNicky',    'Assets/players-web/tas-nicky-hyde.png');
+loadImage('portraitVigilante','Assets/players-web/tas-vigilante-oai.png');
+loadImage('portraitZeak',     'Assets/players-web/tas-zeak-gallent.png');
+
 // ─── Generic wrestler pose sprites ────────────────────────────────
 loadImage('genericIdle',  'Assets/sprites/wrestlers/generic-idle.png');
 loadImage('genericWalk',  'Assets/sprites/wrestlers/generic-walk-sheet.png');
