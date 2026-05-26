@@ -31,15 +31,25 @@ var gs = {
   score:       0,
 
   // Input state
-  keys: {}
+  keys: {},
+  audioStarted: false
 };
 
 // ─── Input ────────────────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
   gs.keys[e.code] = true;
 
+  if (e.code === 'KeyM') {
+    toggleMute();
+  }
+
   // Title screen
   if (gs.screen === SCREEN_TITLE) {
+    if (!gs.audioStarted) {
+      initAudio();
+      playMusic('menu');
+      gs.audioStarted = true;
+    }
     if (e.code === 'Enter') {
       gs.screen = SCREEN_SELECT;
     }
@@ -198,6 +208,7 @@ function startGame() {
   gs.alliesAlive = gs.allies.length;
   gs.score       = 0;
 
+  playMusic('gameplay');
   gs.screen = SCREEN_GAMEPLAY;
 }
 
@@ -324,6 +335,7 @@ function updateEntities(dt) {
     // Catch check
     if (enemyTouchesPlayer(gs.enemies[i], gs.player)) {
       gs.screen = SCREEN_GAMEOVER;
+      playMusic('gameover');
       return;
     }
   }
@@ -374,10 +386,7 @@ function updateScore(dt) {
 // ─── Main loop ────────────────────────────────────────────────────
 var lastTime = 0;
 
-function gameLoop(timestamp) {
-  var dt = Math.min(timestamp - lastTime, 50); // cap at 50ms to avoid spiral
-  lastTime = timestamp;
-
+function tickGame(dt) {
   if (gs.screen === SCREEN_LOADING) {
     if (assetsReady()) {
       gs.screen = SCREEN_TITLE;
@@ -395,19 +404,80 @@ function gameLoop(timestamp) {
       }
       gs.score  = Math.floor(gs.score);
       gs.screen = SCREEN_WIN;
+      playMusic('win');
     } else {
       updateScore(dt);
       updatePlayer(dt);
       updateEntities(dt);
     }
   }
+}
 
+function renderGame() {
   var canvas = document.getElementById('gameCanvas');
   var ctx    = canvas.getContext('2d');
   render(ctx, gs);
+}
+
+function gameLoop(timestamp) {
+  var dt = Math.min(timestamp - lastTime, 50); // cap at 50ms to avoid spiral
+  lastTime = timestamp;
+
+  tickGame(dt);
+  renderGame();
 
   requestAnimationFrame(gameLoop);
 }
+
+function renderGameToText() {
+  var payload = {
+    coordinateSystem: 'origin top-left, x right, y down, pixels',
+    screen: gs.screen,
+    muted: isMuted(),
+    selected: {
+      faction: gs.factionData[gs.selFactionIdx].name,
+      wrestler: gs.factionData[gs.selFactionIdx].wrestlers[gs.selWrestlerIdx].name
+    },
+    roundTimerMs: Math.round(gs.roundTimer),
+    score: Math.floor(gs.score),
+    alliesAlive: gs.alliesAlive
+  };
+
+  if (gs.player) {
+    payload.player = {
+      x: Math.round(gs.player.x),
+      y: Math.round(gs.player.y),
+      room: gs.player.room.id,
+      screenCol: gs.player.screenCol,
+      screenRow: gs.player.screenRow,
+      hidden: gs.player.isHidden
+    };
+  }
+
+  payload.enemies = gs.enemies.map(function(enemy) {
+    return {
+      x: Math.round(enemy.x),
+      y: Math.round(enemy.y),
+      room: enemy.room.id,
+      state: enemy.state
+    };
+  });
+
+  return JSON.stringify(payload);
+}
+
+window.render_game_to_text = renderGameToText;
+
+window.advanceTime = function(ms) {
+  var step = 1000 / 60;
+  var remaining = Math.max(0, ms || 0);
+  var steps = Math.max(1, Math.ceil(remaining / step));
+  for (var i = 0; i < steps; i++) {
+    tickGame(Math.min(step, remaining || step));
+    remaining -= step;
+  }
+  renderGame();
+};
 
 // ─── Canvas setup — integer scale, DPR-aware ──────────────────────
 (function setupCanvas() {
