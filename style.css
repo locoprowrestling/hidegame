@@ -20,3 +20,28 @@ body {
   image-rendering: crisp-edges;
   cursor: crosshair;
 }
+
+#mobileBlock {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4em;
+  width: 100%;
+  height: 100%;
+  color: #c8a84a;
+  text-align: center;
+  padding: 2em;
+}
+
+#mobileBlock p:first-child {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1.2rem, 6vw, 2.2rem);
+  letter-spacing: 0.05em;
+}
+
+#mobileBlock p:not(:first-child) {
+  font-family: 'VT323', monospace;
+  font-size: clamp(1.4rem, 7vw, 2.4rem);
+  color: #888;
+}

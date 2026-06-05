@@ -9,7 +9,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body>
+  <div id="mobileBlock">
+    <p>GAMES MASTER</p>
+    <p>requires a keyboard.</p>
+    <p>Play on a computer.</p>
+  </div>
   <canvas id="gameCanvas" width="320" height="200"></canvas>
+  <script>
+    // Hide canvas and show block screen on touch-primary devices
+    if (window.matchMedia('(pointer: coarse)').matches) {
+      document.getElementById('mobileBlock').style.display = 'flex';
+      document.getElementById('gameCanvas').style.display = 'none';
+    }
+  </script>
   <script src="constants.js"></script>
   <script src="map.js"></script>
   <script src="entities.js"></script>
