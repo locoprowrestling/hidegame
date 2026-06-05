@@ -1,173 +1,222 @@
-// ai.js — Hunter state machine and ally setup movement
+// Games Master AI
+//
+// States:
+//   patrol    — follows BFS-computed paths between waypoints on current floor
+//   chase     — direct pursuit (LOS already clear, no pathfinding needed)
+//   to_stairs — BFS path to exit tile, then floor transition
 
-// ─── Hunter update (call once per frame during PHASE_HUNT) ────────
-function updateHunter(hunter, dt, gs) {
-  switch (hunter.state) {
-    case HUNTER_ENTERING:   _hunterEntering(hunter, dt, gs);   break;
-    case HUNTER_PATROLLING: _hunterPatrolling(hunter, dt, gs); break;
-    case HUNTER_NOTICING:   _hunterNoticing(hunter, dt, gs);   break;
-    case HUNTER_INSPECTING: _hunterInspecting(hunter, dt, gs); break;
-    case HUNTER_ACCUSING:   _hunterAccusing(hunter, dt, gs);   break;
-    case HUNTER_RETURNING:  _hunterReturning(hunter, dt, gs);  break;
-  }
-}
+function updateGM(gm, player, playerFloor, dt) {
 
-function _hunterEntering(hunter, dt, gs) {
-  var wp = gs.room.patrolPath[0];
-  if (moveToward(hunter, wp.x, wp.y, hunter.speed)) {
-    hunter.state = HUNTER_PATROLLING;
-    hunter.patrolIdx = 0;
-  }
-}
-
-function _hunterPatrolling(hunter, dt, gs) {
-  var path = gs.room.patrolPath;
-  var wp   = path[hunter.patrolIdx % path.length];
-  if (moveToward(hunter, wp.x, wp.y, hunter.speed)) {
-    hunter.patrolIdx = (hunter.patrolIdx + 1) % path.length;
+  // ── to_stairs: walk to exit then transition ──────────────────────────────
+  if (gm.state === 'to_stairs') {
+    var arrived = _gmFollowPath(gm, gm.stairTarget.x, gm.stairTarget.y, GM_PATROL_SPEED, 0.4);
+    if (arrived) {
+      gm.floor       = gm.nextFloor;
+      gm.x           = gm.stairTarget.x;
+      gm.y           = gm.stairTarget.y;
+      gm.state       = 'patrol';
+      gm.patrolIdx   = 0;
+      gm.path        = null;
+      gm.pathIdx     = 0;
+      gm.stairTarget = null;
+      gm.nextFloor   = null;
+      gm.floorChangeMs = GM_FLOOR_CHANGE_MS + (Math.random() - 0.5) * 15000;
+    }
+    return;
   }
 
-  // Randomly decide to inspect something
-  if (Math.random() < HUNTER_INSPECT_CHANCE) {
-    var target = _pickInspectTarget(hunter, gs);
-    if (target !== undefined) {
-      hunter.inspectTarget = target;
-      hunter.state         = HUNTER_NOTICING;
-      hunter.stateTimer    = HUNTER_NOTICE_MS;
+  // ── floor-change timer (only outside chase) ──────────────────────────────
+  if (gm.state !== 'chase') {
+    gm.floorChangeMs -= dt;
+    if (gm.floorChangeMs <= 0) {
+      _gmPlanFloorChange(gm, playerFloor);
+      if (gm.state === 'to_stairs') return;
+      gm.floorChangeMs = GM_FLOOR_CHANGE_MS;
     }
   }
-}
 
-function _hunterNoticing(hunter, dt, gs) {
-  hunter.stateTimer -= dt;
-  // Face the target (or destination)
-  var tx, ty;
-  if (hunter.inspectTarget) {
-    tx = hunter.inspectTarget.x + hunter.inspectTarget.width  / 2;
-    ty = hunter.inspectTarget.y + hunter.inspectTarget.height / 2;
-  } else {
-    tx = hunter.inspectDest ? hunter.inspectDest.x : hunter.x;
-    ty = hunter.inspectDest ? hunter.inspectDest.y : hunter.y;
+  // ── act on current floor only ─────────────────────────────────────────────
+  if (gm.floor !== playerFloor) {
+    _gmPatrol(gm);
+    return;
   }
-  hunter.facingAngle = Math.atan2(ty - (hunter.y + hunter.height/2), tx - (hunter.x + hunter.width/2));
 
-  if (hunter.stateTimer <= 0) {
-    // Set destination for inspection walk
-    if (hunter.inspectTarget) {
-      hunter.inspectDest = {
-        x: hunter.inspectTarget.x + hunter.inspectTarget.width  / 2,
-        y: hunter.inspectTarget.y + hunter.inspectTarget.height / 2
-      };
+  if (gm.state === 'patrol') {
+    _gmPatrol(gm);
+    if (_playerLooksAtGM(player, gm) && _gmHasSight(gm, player)) {
+      gm.state       = 'chase';
+      gm.lostSightMs = 0;
+      gm.path        = null; // discard patrol path
+    }
+  } else if (gm.state === 'chase') {
+    _gmMoveToward(gm, player.x, player.y, GM_CHASE_SPEED);
+    if (_gmHasSight(gm, player)) {
+      gm.lostSightMs = 0;
     } else {
-      // Random floor point
-      hunter.inspectDest = {
-        x: 40 + Math.random() * 176,
-        y: UI_BAR_H + 10 + Math.random() * (CANVAS_SIZE - UI_BAR_H - 20)
-      };
+      gm.lostSightMs += dt;
+      if (gm.lostSightMs >= GM_LOSE_CHASE_MS) {
+        gm.state       = 'patrol';
+        gm.lostSightMs = 0;
+        gm.path        = null; // recompute patrol path from current pos
+      }
     }
-    hunter.returnDest  = {x: hunter.x + hunter.width/2, y: hunter.y + hunter.height/2};
-    hunter.state       = HUNTER_INSPECTING;
-    hunter.stateTimer  = HUNTER_INSPECT_MS;
-    hunter.speed       = HUNTER_INSPECT_SPEED;
   }
 }
 
-function _hunterInspecting(hunter, dt, gs) {
-  var dest = hunter.inspectDest;
-  var arrived = moveToward(hunter, dest.x, dest.y, hunter.speed);
+// ── BFS pathfinding ───────────────────────────────────────────────────────────
+// Returns [{x, y}] tile centres from start to end (exclusive of start tile),
+// or [] if already at destination, or null if no path exists.
+function _bfsPath(fx, fy, tx, ty, floorIdx) {
+  var sc = Math.floor(fx), sr = Math.floor(fy);
+  var ec = Math.floor(tx), er = Math.floor(ty);
+  if (sc === ec && sr === er) return [];
 
+  var queue    = [[sc, sr]];
+  var visited  = {};
+  var cameFrom = {};
+  var startKey = sc + ',' + sr;
+  visited[startKey] = true;
+
+  var found = false;
+  outer: while (queue.length > 0) {
+    var cur = queue.shift();
+    var cc = cur[0], cr = cur[1];
+    var dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (var i = 0; i < dirs.length; i++) {
+      var nc = cc + dirs[i][0], nr = cr + dirs[i][1];
+      var nk = nc + ',' + nr;
+      if (visited[nk] || isWallOnFloor(nc, nr, floorIdx)) continue;
+      visited[nk]  = true;
+      cameFrom[nk] = cc + ',' + cr;
+      if (nc === ec && nr === er) { found = true; break outer; }
+      queue.push([nc, nr]);
+    }
+  }
+
+  if (!found) return null;
+
+  var path = [];
+  var key  = ec + ',' + er;
+  while (key !== startKey) {
+    var parts = key.split(',');
+    path.unshift({ x: +parts[0] + 0.5, y: +parts[1] + 0.5 });
+    key = cameFrom[key];
+  }
+  return path;
+}
+
+// Follows the stored BFS path toward (destX, destY).
+// Returns true once within `arrivalDist` of destination.
+// Automatically recomputes the path if gm.path is null.
+function _gmFollowPath(gm, destX, destY, speed, arrivalDist) {
+  // Recompute path if needed
+  if (!gm.path) {
+    gm.path    = _bfsPath(gm.x, gm.y, destX, destY, gm.floor) || [];
+    gm.pathIdx = 0;
+  }
+
+  // Walk path steps
+  while (gm.pathIdx < gm.path.length) {
+    var step = gm.path[gm.pathIdx];
+    if (dist2d(gm.x, gm.y, step.x, step.y) < 0.28) {
+      gm.pathIdx++;
+    } else {
+      _gmMoveToward(gm, step.x, step.y, speed);
+      return false;
+    }
+  }
+
+  // Path exhausted — close enough to destination?
+  if (dist2d(gm.x, gm.y, destX, destY) < arrivalDist) return true;
+
+  // Overshot or path was empty — nudge directly
+  _gmMoveToward(gm, destX, destY, speed);
+  return dist2d(gm.x, gm.y, destX, destY) < arrivalDist;
+}
+
+// ── Patrol ────────────────────────────────────────────────────────────────────
+function _gmPatrol(gm) {
+  var patrol = FLOORS[gm.floor].gmPatrol;
+  var wp     = patrol[gm.patrolIdx % patrol.length];
+
+  var arrived = _gmFollowPath(gm, wp.x, wp.y, GM_PATROL_SPEED, 0.35);
   if (arrived) {
-    // Pause at destination while stateTimer counts down
-    hunter.stateTimer -= dt;
-    if (hunter.stateTimer <= 0) {
-      _evaluateInspection(hunter, gs);
+    gm.patrolIdx = (gm.patrolIdx + 1) % patrol.length;
+    gm.path      = null; // force recompute for next waypoint
+    gm.pathIdx   = 0;
+  }
+}
+
+// ── Floor change ──────────────────────────────────────────────────────────────
+function _gmPlanFloorChange(gm, playerFloor) {
+  var delta  = playerFloor > gm.floor ? 1 : playerFloor < gm.floor ? -1 : 0;
+  var target = Math.random() < 0.65
+    ? gm.floor + (delta !== 0 ? delta : (Math.random() < 0.5 ? 1 : -1))
+    : gm.floor + (Math.random() < 0.5 ? 1 : -1);
+  target = Math.max(0, Math.min(FLOORS.length - 1, target));
+  if (target === gm.floor) {
+    // Got clamped back (e.g. tried floor -1 from floor 0) — pick the only valid direction
+    if (gm.floor === 0) target = 1;
+    else if (gm.floor === FLOORS.length - 1) target = FLOORS.length - 2;
+    else target = gm.floor + (Math.random() < 0.5 ? 1 : -1);
+  }
+  if (target === gm.floor) return;
+
+  var exits  = FLOORS[gm.floor].exits;
+  var chosen = null;
+  for (var i = 0; i < exits.length; i++) {
+    if (exits[i].toFloor === target) { chosen = exits[i]; break; }
+  }
+  if (!chosen) {
+    for (var i = 0; i < exits.length; i++) {
+      var going = exits[i].toFloor > gm.floor ? 1 : -1;
+      if (going === Math.sign(target - gm.floor)) { chosen = exits[i]; break; }
     }
   }
+  if (!chosen) return;
+
+  gm.state       = 'to_stairs';
+  gm.stairTarget = { x: chosen.x, y: chosen.y };
+  gm.nextFloor   = chosen.toFloor;
+  gm.path        = null; // recompute toward staircase
+  gm.pathIdx     = 0;
 }
 
-function _evaluateInspection(hunter, gs) {
-  var target = hunter.inspectTarget;
-
-  if (target === gs.player && gs.player.isTransformed) {
-    // Suspicion is handled by tickSuspicion; check if it's over threshold
-    if (gs.suspicion >= SUSPICION_MAX) {
-      hunter.state = HUNTER_ACCUSING;
-      return;
-    }
-  }
-
-  if (target && target !== gs.player && target.alive) {
-    // Ally inspection
-    if (target.badHide) {
-      target.alive = false;
-      gs.alliesAlive = Math.max(0, gs.alliesAlive - 1);
-    }
-  }
-
-  // Return to patrol
-  hunter.inspectTarget = null;
-  hunter.inspectDest   = null;
-  hunter.state         = HUNTER_RETURNING;
-  hunter.speed         = HUNTER_PATROL_SPEED;
+// ── Detection ─────────────────────────────────────────────────────────────────
+function _playerLooksAtGM(player, gm) {
+  var dist = dist2d(player.x, player.y, gm.x, gm.y);
+  if (dist > GM_SIGHT_DIST) return false;
+  var nx = (gm.x - player.x) / dist;
+  var ny = (gm.y - player.y) / dist;
+  return (nx * player.dirX + ny * player.dirY) > 0.78;
 }
 
-function _hunterAccusing(hunter, dt, gs) {
-  // Move toward player rapidly
-  var player = gs.player;
-  moveToward(hunter, player.x + player.width/2, player.y + player.height/2, HUNTER_INSPECT_SPEED * 1.5);
-  // Fill suspicion to max; game.js watches for suspicion >= SUSPICION_MAX
-  gs.suspicion = SUSPICION_MAX;
+function _gmHasSight(gm, player) {
+  var d = dist2d(gm.x, gm.y, player.x, player.y);
+  if (d > GM_SIGHT_DIST) return false;
+  var steps = Math.ceil(d * 4);
+  var dx = (player.x - gm.x) / steps;
+  var dy = (player.y - gm.y) / steps;
+  for (var i = 1; i < steps; i++) {
+    if (isWallOnFloor(Math.floor(gm.x + dx * i), Math.floor(gm.y + dy * i), gm.floor)) return false;
+  }
+  return true;
 }
 
-function _hunterReturning(hunter, dt, gs) {
-  var dest = hunter.returnDest;
-  if (!dest || moveToward(hunter, dest.x, dest.y, hunter.speed)) {
-    hunter.state      = HUNTER_PATROLLING;
-    hunter.returnDest = null;
-  }
+// ── Low-level movement (GM's own floor for collision) ─────────────────────────
+function _gmMoveToward(gm, tx, ty, speed) {
+  var dx = tx - gm.x, dy = ty - gm.y;
+  var d  = Math.sqrt(dx * dx + dy * dy);
+  if (d < 0.01) { gm.vx = 0; gm.vy = 0; return; }
+  gm.vx = (dx / d) * speed;
+  gm.vy = (dy / d) * speed;
+  var nx = gm.x + gm.vx;
+  var ny = gm.y + gm.vy;
+  if (!isWallOnFloor(Math.floor(nx), Math.floor(gm.y), gm.floor)) gm.x = nx;
+  if (!isWallOnFloor(Math.floor(gm.x), Math.floor(ny), gm.floor)) gm.y = ny;
 }
 
-// Pick a target for inspection.
-// Returns: a Player, an Ally, or null (fake inspection point).
-// undefined means no valid target and no inspection should start.
-function _pickInspectTarget(hunter, gs) {
-  var candidates = [];
-
-  // Player if transformed
-  if (gs.player.isTransformed) {
-    var d = entityDist(hunter, gs.player);
-    candidates.push({target: gs.player, weight: d < 80 ? 3 : 1});
-  }
-
-  // Alive allies
-  for (var i = 0; i < gs.allies.length; i++) {
-    if (gs.allies[i].alive) {
-      candidates.push({target: gs.allies[i], weight: 1});
-    }
-  }
-
-  // Null = fake inspection walk
-  candidates.push({target: null, weight: 2});
-
-  if (candidates.length === 0) return undefined;
-
-  var total = 0;
-  for (var j = 0; j < candidates.length; j++) total += candidates[j].weight;
-  var r = Math.random() * total;
-  var acc = 0;
-  for (var k = 0; k < candidates.length; k++) {
-    acc += candidates[k].weight;
-    if (r <= acc) return candidates[k].target;
-  }
-  return null;
-}
-
-// ─── Ally setup movement (call during PHASE_SETUP) ─────────────────
-// Moves ally toward its destX/destY; transforms when arrived.
-function updateAllySetup(ally) {
-  if (ally.isTransformed) return;
-  if (moveToward(ally, ally.destX, ally.destY, ally.speed)) {
-    ally.isTransformed = true;
-    ally.isMoving      = false;
-  }
+function gmCaughtPlayer(gm, player, playerFloor) {
+  return gm.floor === playerFloor &&
+    dist2d(gm.x, gm.y, player.x, player.y) < GM_CATCH_DIST;
 }

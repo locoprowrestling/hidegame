@@ -1,288 +1,228 @@
-// game.js — GameState, main loop, input, round management
-
-// ─── Parse team data ──────────────────────────────────────────────
-var RAW_TEAMS = JSON.parse(document.getElementById('teams-data').textContent);
-
-// ─── GameState ────────────────────────────────────────────────────
 var gs = {
-  screen:     SCREEN_TITLE,
-  phase:      null,
-
-  // Select screen
-  teamData:    RAW_TEAMS.teams,
-  selTeamIdx:  0,
-  selCharIdx:  0,
-
-  // Round
-  room:        null,
-  player:      null,
-  hunter:      null,
-  allies:      [],
-  alliesAlive: 0,
-
-  // Timers (ms)
-  setupTimer: 0,
-  huntTimer:  0,
-  introTimer: 0,
-
-  // Suspicion
-  suspicion: 0,
-
-  // Scoring
-  score: 0,
-
-  // Input
-  keys: {},
-  audioStarted: false
+  screen:       SCREEN_TITLE,
+  player:       null,
+  gm:           null,
+  currentFloor: 0,
+  keys:         {},
+  mouseRotate:  0,
+  pickupFlash:  0,
+  flickerAmt:   0,
+  flickerTimer: 0,
+  showMap:          false,
+  mapUsedThisFloor: false,
+  mapTimeLeft:      0,
+  audioReady:       false,
 };
 
-// ─── Input ────────────────────────────────────────────────────────
+// ── Input ─────────────────────────────────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
   gs.keys[e.code] = true;
+
   if (e.code === 'KeyM') toggleMute();
 
   if (gs.screen === SCREEN_TITLE) {
-    if (!gs.audioStarted) { initAudio(); playMusic('menu'); gs.audioStarted = true; }
-    if (e.code === 'Enter') gs.screen = SCREEN_TEAM;
+    if (!gs.audioReady) { initAudio(); gs.audioReady = true; }
+    playTrack('menu');
+    if (e.code === 'Enter' || e.code === 'Space') {
+      // Defer game track by one frame so the menu play() promise resolves first
+      setTimeout(startGame, 0);
+    }
     return;
   }
 
-  if (gs.screen === SCREEN_TEAM) {
-    var tLen = gs.teamData.length;
-    if (e.code === 'ArrowLeft'  || e.code === 'KeyA') gs.selTeamIdx = (gs.selTeamIdx - 1 + tLen) % tLen;
-    if (e.code === 'ArrowRight' || e.code === 'KeyD') gs.selTeamIdx = (gs.selTeamIdx + 1) % tLen;
-    if (e.code === 'Enter') { gs.selCharIdx = 0; gs.screen = SCREEN_CHAR; }
-    return;
-  }
-
-  if (gs.screen === SCREEN_CHAR) {
-    var cLen = gs.teamData[gs.selTeamIdx].characters.length;
-    if (e.code === 'ArrowUp'   || e.code === 'KeyW') gs.selCharIdx = (gs.selCharIdx - 1 + cLen) % cLen;
-    if (e.code === 'ArrowDown' || e.code === 'KeyS') gs.selCharIdx = (gs.selCharIdx + 1) % cLen;
-    if (e.code === 'Enter') startRound();
-    return;
-  }
-
-  if (gs.screen === SCREEN_WIN || gs.screen === SCREEN_GAMEOVER) {
+  if (gs.screen === SCREEN_GAMEOVER || gs.screen === SCREEN_WIN) {
     if (e.code === 'KeyR' || e.code === 'Enter') {
       gs.screen = SCREEN_TITLE;
-      gs.selTeamIdx = 0;
-      gs.selCharIdx = 0;
+      _fullReset();
+      if (!gs.audioReady) { initAudio(); gs.audioReady = true; }
+      playTrack('menu');
     }
     return;
   }
 
-  if (gs.screen === SCREEN_GAMEPLAY) {
-    // Transform / untransform
-    if (e.code === 'Space') {
-      handleTransformToggle();
-      e.preventDefault();
-    }
-    // Cycle object
-    if (e.code === 'KeyQ') cycleObject(-1);
-    if (e.code === 'KeyE') cycleObject(1);
-    // Number keys 1–8
-    if (e.code.startsWith('Digit')) {
-      var n = parseInt(e.code.replace('Digit', ''), 10);
-      if (n >= 1 && n <= OBJECTS.length) setObject(n - 1);
-    }
+  if (gs.screen === SCREEN_PLAY) {
+    if (e.code === 'Tab')  { e.preventDefault(); }
+    if (e.code === 'KeyF' || e.code === 'Space') { tryCollect(); tryUseExit(); e.preventDefault(); }
+    if (e.code === 'Escape') document.exitPointerLock && document.exitPointerLock();
   }
 });
 
 document.addEventListener('keyup', function(e) { gs.keys[e.code] = false; });
 
-// ─── Transform helpers ────────────────────────────────────────────
-function handleTransformToggle() {
-  var player = gs.player;
-  if (!player.alive) return;
-
-  if (player.isTransformed) {
-    player.isTransformed = false;
-    // Penalty for retransforming during hunt
-    if (gs.phase === PHASE_HUNT) {
-      gs.suspicion = Math.min(SUSPICION_MAX, gs.suspicion + SUSPICION_RETRANSFORM);
-      player.retransformed = true;
-    }
-  } else {
-    player.isTransformed = true;
-  }
-}
-
-function cycleObject(dir) {
-  if (gs.player.isTransformed) return; // locked while transformed
-  setObject((gs.player.objIdx + dir + OBJECTS.length) % OBJECTS.length);
-}
-
-function setObject(idx) {
-  if (gs.player.isTransformed) return;
-  gs.player.objIdx = idx;
-}
-
-// ─── Round init ───────────────────────────────────────────────────
-function startRound() {
-  // Pick random room
-  var roomId = ROOM_IDS[Math.floor(Math.random() * ROOM_IDS.length)];
-  gs.room = ROOMS[roomId];
-
-  // Teams
-  var playerTeam  = gs.teamData[gs.selTeamIdx];
-  var playerChar  = playerTeam.characters[gs.selCharIdx];
-  var hunterTeam  = gs.teamData[1 - gs.selTeamIdx]; // opposing team
-
-  // Player
-  gs.player = new Player(playerTeam, playerChar);
-  gs.player.x = gs.room.playerSpawn.x - gs.player.width  / 2;
-  gs.player.y = gs.room.playerSpawn.y - gs.player.height / 2;
-  clampToField(gs.player);
-
-  // Hunter (created but placed off-screen; enters during hunt phase)
-  gs.hunter = new Hunter(hunterTeam, gs.room);
-
-  // Allies
-  gs.allies = [];
-  var spawns = gs.room.allySpawns;
-  for (var i = 0; i < spawns.length && i < 2; i++) {
-    var ally = new Ally(playerTeam, spawns[i]);
-    // Pick a random object and believable zone destination
-    ally.objIdx = Math.floor(Math.random() * OBJECTS.length);
-    var dest = pickAllyDest(ally, gs.room);
-    ally.destX = dest.x;
-    ally.destY = dest.y;
-    gs.allies.push(ally);
-  }
-  gs.alliesAlive = gs.allies.length;
-
-  // Reset state
-  gs.suspicion  = 0;
-  gs.score      = 0;
-  gs.setupTimer = SETUP_TIMER * 1000;
-  gs.huntTimer  = HUNT_TIMER  * 1000;
-  gs.introTimer = ROOM_INTRO_MS;
-  gs.phase      = null;
-
-  playMusic('gameplay');
-  gs.screen = SCREEN_ROOM_INTRO;
-}
-
-// Pick a destination pixel inside a believable zone for ally's object.
-// Falls back to allySpawn if no zone matches.
-function pickAllyDest(ally, room) {
-  var obj     = OBJECTS[ally.objIdx];
-  var zones   = room.zones;
-  var matches = [];
-  for (var i = 0; i < zones.length; i++) {
-    if (zones[i].believableObjects.indexOf(obj.id) !== -1) {
-      matches.push(zones[i]);
-    }
-  }
-  if (matches.length === 0) return {x: ally.x + ally.width/2, y: ally.y + ally.height/2};
-  var z = matches[Math.floor(Math.random() * matches.length)];
-  var px = z.x + 4 + Math.random() * Math.max(0, z.w - 8);
-  var py = z.y + 4 + Math.random() * Math.max(0, z.h - 8);
-  return {x: Math.round(px), y: Math.round(py)};
-}
-
-// ─── Player movement ──────────────────────────────────────────────
-function updatePlayer(dt) {
-  var p = gs.player;
-  p.isMoving = false;
-  var dx = 0, dy = 0;
-  if (gs.keys['ArrowLeft']  || gs.keys['KeyA']) dx -= p.speed;
-  if (gs.keys['ArrowRight'] || gs.keys['KeyD']) dx += p.speed;
-  if (gs.keys['ArrowUp']    || gs.keys['KeyW']) dy -= p.speed;
-  if (gs.keys['ArrowDown']  || gs.keys['KeyS']) dy += p.speed;
-
-  if (dx !== 0 || dy !== 0) {
-    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
-    p.facingAngle = Math.atan2(dy, dx);
-    p.x += dx; p.y += dy;
-    p.isMoving = true;
-    clampToField(p);
-  }
-}
-
-// ─── Phase updates ────────────────────────────────────────────────
-function updateSetup(dt) {
-  gs.setupTimer -= dt;
-  updatePlayer(dt);
-
-  // Ally movement during setup
-  for (var i = 0; i < gs.allies.length; i++) {
-    updateAllySetup(gs.allies[i]);
-  }
-
-  if (gs.setupTimer <= 0) {
-    gs.phase = PHASE_HUNT;
-    gs.huntTimer = HUNT_TIMER * 1000;
-  }
-}
-
-function updateHunt(dt) {
-  gs.huntTimer -= dt;
-  updatePlayer(dt);
-  if (gs.hunter) updateHunter(gs.hunter, dt, gs);
-  tickSuspicion(dt, gs);
-
-  // Win
-  if (gs.huntTimer <= 0) {
-    endRound(true);
-    return;
-  }
-  // Lose
-  if (gs.suspicion >= SUSPICION_MAX) {
-    endRound(false);
-  }
-}
-
-function endRound(survived) {
-  if (survived) {
-    // Calculate score
-    var s = SCORE_BASE;
-    var secondsSurvived = Math.round((HUNT_TIMER * 1000 - gs.huntTimer) / 1000);
-    s += secondsSurvived * SCORE_PER_SECOND;
-    s += gs.alliesAlive * SCORE_ALLY_BONUS;
-    if (!gs.player.movedWhileTransformed)  s += SCORE_STILL_BONUS;
-    if (!gs.player.retransformed)          s += SCORE_NO_RETRANSFORM;
-    if (gs.player.wasInGoodZone)           s += SCORE_GOOD_ZONE_BONUS;
-    gs.score = s;
-    playMusic('win');
-    gs.screen = SCREEN_WIN;
-  } else {
-    gs.score  = 0;
-    playMusic('gameover');
-    gs.screen = SCREEN_GAMEOVER;
-  }
-}
-
-// ─── Main loop ────────────────────────────────────────────────────
 var canvas = document.getElementById('gameCanvas');
-var ctx    = canvas.getContext('2d');
+canvas.addEventListener('click', function() {
+  if (gs.screen === SCREEN_PLAY) canvas.requestPointerLock();
+});
+document.addEventListener('mousemove', function(e) {
+  if (document.pointerLockElement === canvas && gs.screen === SCREEN_PLAY)
+    gs.mouseRotate += e.movementX * MOUSE_SENSITIVITY;
+});
 
-// 3× CSS scale
-canvas.style.width  = (CANVAS_SIZE * 3) + 'px';
-canvas.style.height = (CANVAS_SIZE * 3) + 'px';
+// ── Start / reset ─────────────────────────────────────────────────────────────
+function startGame() {
+  _fullReset();
+  gs.screen = SCREEN_PLAY;
+  if (!gs.audioReady) { initAudio(); gs.audioReady = true; }
+  playTrack('play');
+}
+
+function _fullReset() {
+  for (var f = 0; f < FLOOR_COLLECTED.length; f++)
+    for (var p = 0; p < FLOOR_COLLECTED[f].length; p++)
+      FLOOR_COLLECTED[f][p] = false;
+
+  gs.currentFloor = 0;
+  switchToFloor(0);
+  gs.player       = makePlayer();
+  gs.gm           = makeGM();
+  gs.pickupFlash      = 0;
+  gs.flickerAmt       = 0;
+  gs.showMap          = false;
+  gs.mapUsedThisFloor = false;
+  gs.mapTimeLeft      = 0;
+}
+
+// ── Collect ───────────────────────────────────────────────────────────────────
+function tryCollect() {
+  var idx = _nearestProgram(gs.player);
+  if (idx === null) return;
+  collectProgram(idx);
+  gs.pickupFlash = 300;
+}
+
+// ── Floor exits ───────────────────────────────────────────────────────────────
+function tryUseExit() {
+  var exits = FLOORS[gs.currentFloor].exits;
+  for (var i = 0; i < exits.length; i++) {
+    var ex = exits[i];
+    if (dist2d(gs.player.x, gs.player.y, ex.x + 0.5, ex.y + 0.5) < EXIT_DIST) {
+      _changeFloor(ex.toFloor);
+      return;
+    }
+  }
+  // Front-door escape (floor 0 only)
+  if (gs.currentFloor === 0 && totalCollected() === totalPrograms()) {
+    if (dist2d(gs.player.x, gs.player.y, EXIT.x, EXIT.y) < EXIT_DIST) {
+      playTrack('win');
+      gs.screen = SCREEN_WIN;
+    }
+  }
+}
+
+function _changeFloor(toFloor) {
+  gs.currentFloor = toFloor;
+  switchToFloor(toFloor);
+  var s = FLOORS[toFloor].playerStart;
+  gs.player.x     = s.x;   gs.player.y     = s.y;
+  gs.player.dirX  = s.dirX; gs.player.dirY  = s.dirY;
+  gs.player.planeX = s.planeX; gs.player.planeY = s.planeY;
+  gs.showMap          = false;
+  gs.mapUsedThisFloor = false;
+  gs.mapTimeLeft      = 0;
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+var ctx = canvas.getContext('2d');
+var DPR = window.devicePixelRatio || 1;
+canvas.width  = Math.round(CANVAS_W * DPR);
+canvas.height = Math.round(CANVAS_H * DPR);
+canvas.style.width  = (CANVAS_W * CSS_SCALE) + 'px';
+canvas.style.height = (CANVAS_H * CSS_SCALE) + 'px';
+ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+ctx.imageSmoothingEnabled = false;
 
 var _lastTime = 0;
 
 function loop(ts) {
-  var dt = Math.min(ts - _lastTime, 50); // cap at 50ms / ~20fps minimum
+  var dt = Math.min(ts - _lastTime, 50);
   _lastTime = ts;
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Screen transitions that need timer ticks
-  if (gs.screen === SCREEN_ROOM_INTRO) {
-    gs.introTimer -= dt;
-    if (gs.introTimer <= 0) {
-      gs.phase = PHASE_SETUP;
-      gs.screen = SCREEN_GAMEPLAY;
+  if (gs.screen === SCREEN_TITLE)    { drawTitle(ctx);    requestAnimationFrame(loop); return; }
+  if (gs.screen === SCREEN_GAMEOVER) { drawGameOver(ctx); requestAnimationFrame(loop); return; }
+  if (gs.screen === SCREEN_WIN)      { drawWin(ctx);      requestAnimationFrame(loop); return; }
+
+  var p = gs.player;
+
+  // Input
+  var fwd = 0, strafe = 0, rot = 0;
+  var shift = gs.keys['ShiftLeft'] || gs.keys['ShiftRight'];
+  if (gs.keys['ArrowUp']    || gs.keys['KeyW']) fwd = 1;
+  if (gs.keys['ArrowDown']  || gs.keys['KeyS']) fwd = -1;
+  if (shift) {
+    if (gs.keys['ArrowLeft'])  rot    = -1;
+    if (gs.keys['ArrowRight']) rot    =  1;
+  } else {
+    if (gs.keys['ArrowLeft'])  strafe = -1;
+    if (gs.keys['ArrowRight']) strafe =  1;
+  }
+  if (gs.keys['KeyQ'])       rot    = -1;
+  if (gs.keys['KeyE'])       rot    =  1;
+  if (shift) {
+    if (gs.keys['KeyA']) rot    = -1;
+    if (gs.keys['KeyD']) rot    =  1;
+  } else {
+    if (gs.keys['KeyA']) strafe = -1;
+    if (gs.keys['KeyD']) strafe =  1;
+  }
+
+  movePlayer(p, fwd, strafe, dt);
+  var totalRot = rot * PLAYER_ROT_SPEED + gs.mouseRotate;
+  if (totalRot !== 0) rotatePlayer(p, totalRot);
+  gs.mouseRotate = 0;
+
+  updateGM(gs.gm, p, gs.currentFloor, dt);
+
+  if (gs.pickupFlash > 0) gs.pickupFlash -= dt;
+
+  gs.flickerTimer -= dt;
+  if (gs.flickerTimer <= 0) {
+    var onSameFloor = gs.gm.floor === gs.currentFloor;
+    var gmD = onSameFloor ? dist2d(p.x, p.y, gs.gm.x, gs.gm.y) : 99;
+    var chance = gmD < 4 ? 0.6 : 0.15;
+    gs.flickerAmt   = Math.random() < chance ? (Math.random() * 6 - 3) : 0;
+    gs.flickerTimer = 80 + Math.random() * 120;
+  }
+
+  // Lose
+  if (gmCaughtPlayer(gs.gm, p, gs.currentFloor)) {
+    playTrack('gameover');
+    gs.screen = SCREEN_GAMEOVER;
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  // Win
+  if (totalCollected() === totalPrograms() &&
+      gs.currentFloor === 0 &&
+      dist2d(p.x, p.y, EXIT.x, EXIT.y) < EXIT_DIST) {
+    playTrack('win');
+    gs.screen = SCREEN_WIN;
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  if (gs.keys['Tab'] && !gs.mapUsedThisFloor) {
+    gs.mapUsedThisFloor = true;
+    gs.mapTimeLeft = 3000;
+    gs.showMap = true;
+  }
+  if (gs.showMap) {
+    gs.mapTimeLeft -= dt;
+    if (gs.mapTimeLeft <= 0 || !gs.keys['Tab']) {
+      gs.showMap = false;
+      gs.mapTimeLeft = 0;
     }
   }
 
-  if (gs.screen === SCREEN_GAMEPLAY) {
-    if      (gs.phase === PHASE_SETUP) updateSetup(dt);
-    else if (gs.phase === PHASE_HUNT)  updateHunt(dt);
-  }
+  castAndDraw(ctx, p, gs);
+  drawSprites(ctx, p, gs);
+  drawStairIndicators(ctx, p, gs);
+  drawVignette(ctx, gs);
+  drawPickupFlash(ctx, gs);
+  drawHUD(ctx, gs);
+  drawMinimap(ctx, gs);
 
-  drawFrame(ctx, gs);
   requestAnimationFrame(loop);
 }
 

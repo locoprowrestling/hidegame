@@ -3,58 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoCo Pro Wrestling: Hide</title>
+  <title>GAMES MASTER</title>
   <link rel="icon" href="data:,">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 </head>
 <body>
-  <canvas id="gameCanvas" width="256" height="256"></canvas>
-
-  <!-- ═══════════════════════════════════════════════
-       GAME DATA — parsed once at startup in game.js
-       ═══════════════════════════════════════════════ -->
-
-  <script type="application/json" id="teams-data">
-  {
-    "teams": [
-      {
-        "name": "Team A",
-        "color": "#E63946",
-        "characters": [
-          {"id":"A1","label":"A1","speedMult":1.0,"hideMult":1.0},
-          {"id":"A2","label":"A2","speedMult":1.2,"hideMult":0.8},
-          {"id":"A3","label":"A3","speedMult":0.8,"hideMult":1.2},
-          {"id":"A4","label":"A4","speedMult":1.0,"hideMult":1.0}
-        ]
-      },
-      {
-        "name": "Team B",
-        "color": "#457B9D",
-        "characters": [
-          {"id":"B1","label":"B1","speedMult":1.0,"hideMult":1.0},
-          {"id":"B2","label":"B2","speedMult":1.2,"hideMult":0.8},
-          {"id":"B3","label":"B3","speedMult":0.8,"hideMult":1.2},
-          {"id":"B4","label":"B4","speedMult":1.0,"hideMult":1.0}
-        ]
-      }
-    ]
-  }
-  </script>
-
-  <!-- ═══════════════════════════════
-       SCRIPTS — load order matters
-       ═══════════════════════════════ -->
+  <canvas id="gameCanvas" width="320" height="200"></canvas>
   <script src="constants.js"></script>
-  <script src="objects.js"></script>
-  <script src="rooms.js"></script>
+  <script src="map.js"></script>
   <script src="entities.js"></script>
-  <script src="suspicion.js"></script>
+  <script src="textures.js"></script>
+  <script src="raycaster.js"></script>
+  <script src="sprites.js"></script>
   <script src="ai.js"></script>
-  <script src="renderer.js"></script>
   <script src="audio.js"></script>
+  <script src="renderer.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

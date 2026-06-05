@@ -1,114 +1,89 @@
-// entities.js — Player, Hunter, Ally constructors
+// Player and Games Master state + movement/collision
 
-// ─── Player ───────────────────────────────────────────────────────
-function Player(teamData, charData) {
-  this.team      = teamData;   // {name, color, characters}
-  this.char      = charData;   // {id, label, speedMult, hideMult}
-
-  this.x = 0; this.y = 0;     // set by startRound
-  this.width  = 12;
-  this.height = 12;
-  this.speed  = PLAYER_SPEED_BASE * charData.speedMult;
-
-  // Transform state
-  this.isTransformed = false;
-  this.objIdx        = 0;      // index into OBJECTS array
-
-  // Scoring flags (reset each round)
-  this.movedWhileTransformed = false;
-  this.retransformed         = false;
-  this.wasInGoodZone         = false;
-
-  this.facingAngle = 0;
-  this.isMoving    = false;
-  this.alive       = true;
+function makePlayer() {
+  var s = FLOORS[0].playerStart;
+  return {
+    x: s.x, y: s.y, dirX: s.dirX, dirY: s.dirY,
+    planeX: s.planeX, planeY: s.planeY,
+    bobPhase: 0, footstepTimer: 0,
+  };
 }
 
-// ─── Hunter ───────────────────────────────────────────────────────
-function Hunter(teamData, room) {
-  this.team   = teamData;
-  this.room   = room;
-
-  // Start off-screen at entry point
-  this.x = room.hunterEntry.x;
-  this.y = room.hunterEntry.y;
-  this.width  = 14;
-  this.height = 14;
-  this.speed  = HUNTER_PATROL_SPEED;
-
-  this.state        = HUNTER_ENTERING;
-  this.patrolIdx    = 0;          // current waypoint in room.patrolPath
-  this.stateTimer   = 0;          // ms counter for timed states
-  this.inspectTarget = null;      // entity being inspected (Player | Ally | null)
-  this.inspectDest  = null;       // {x, y} target pixel for inspection walk
-  this.returnDest   = null;       // {x, y} to return to after inspecting
-
-  this.facingAngle  = 0;
-  this.isMoving     = true;
+function makeGM() {
+  var s = FLOORS[0].gmStart;
+  return {
+    x: s.x, y: s.y,
+    floor:         0,
+    patrolIdx:     0,
+    state:         'patrol',  // 'patrol' | 'chase' | 'to_stairs'
+    lostSightMs:   0,
+    floorChangeMs: GM_FLOOR_CHANGE_MS,
+    stairTarget:   null,
+    nextFloor:     null,
+    // BFS path following
+    path:          null,      // [{x,y}] tile-centre steps, or null = needs compute
+    pathIdx:       0,
+    // Last movement vector (used for facing direction in sprite animation)
+    vx: 0, vy: 0,
+  };
 }
 
-// ─── Ally ─────────────────────────────────────────────────────────
-function Ally(teamData, spawnPt) {
-  this.team  = teamData;
+// ── Player movement ───────────────────────────────────────────────────────────
 
-  this.x = spawnPt.x;
-  this.y = spawnPt.y;
-  this.width  = 12;
-  this.height = 12;
-  this.speed  = ALLY_MOVE_SPEED;
+function movePlayer(player, fwd, strafe, dt) {
+  var speed = PLAYER_SPEED;
+  var dx = player.dirX * fwd * speed + (-player.dirY) * strafe * speed;
+  var dy = player.dirY * fwd * speed +   player.dirX  * strafe * speed;
+  var r  = PLAYER_RADIUS;
 
-  // Ally picks an object and a destination zone during setup
-  this.objIdx      = 0;
-  this.destX       = spawnPt.x;
-  this.destY       = spawnPt.y;
-  this.isTransformed = false;
-  this.alive       = true;
-  this.badHide     = Math.random() < 0.25;  // 25% chance of poor placement
-
-  this.facingAngle = 0;
-  this.isMoving    = false;
-}
-
-// ─── Pixel distance between two entities (centers) ────────────────
-function entityDist(a, b) {
-  var ax = a.x + a.width  / 2;
-  var ay = a.y + a.height / 2;
-  var bx = b.x + b.width  / 2;
-  var by = b.y + b.height / 2;
-  return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
-}
-
-// ─── Pixel distance from entity center to a point ─────────────────
-function distToPoint(entity, px, py) {
-  var ex = entity.x + entity.width  / 2;
-  var ey = entity.y + entity.height / 2;
-  return Math.sqrt((ex - px) * (ex - px) + (ey - py) * (ey - py));
-}
-
-// ─── Move entity toward (tx, ty) at speed; returns true if arrived ─
-function moveToward(entity, tx, ty, speed) {
-  var dx = tx - (entity.x + entity.width  / 2);
-  var dy = ty - (entity.y + entity.height / 2);
-  var dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist <= speed) {
-    entity.x = tx - entity.width  / 2;
-    entity.y = ty - entity.height / 2;
-    entity.isMoving = false;
-    return true;
+  // Check only the LEADING edge in each axis, sampled at ±r on the other axis
+  // to catch corner-grazing without falsely blocking doorway traversal.
+  var nx = player.x + dx;
+  if (dx !== 0) {
+    var xEdge = nx + (dx > 0 ? r : -r);
+    if (!isWall(Math.floor(xEdge), Math.floor(player.y + r * 0.8)) &&
+        !isWall(Math.floor(xEdge), Math.floor(player.y - r * 0.8))) {
+      player.x = nx;
+    }
+  } else {
+    player.x = nx;
   }
-  entity.x += (dx / dist) * speed;
-  entity.y += (dy / dist) * speed;
-  entity.facingAngle = Math.atan2(dy, dx);
-  entity.isMoving = true;
-  return false;
+
+  var ny = player.y + dy;
+  if (dy !== 0) {
+    var yEdge = ny + (dy > 0 ? r : -r);
+    if (!isWall(Math.floor(player.x + r * 0.8), Math.floor(yEdge)) &&
+        !isWall(Math.floor(player.x - r * 0.8), Math.floor(yEdge))) {
+      player.y = ny;
+    }
+  } else {
+    player.y = ny;
+  }
+
+  if (fwd !== 0 || strafe !== 0) {
+    player.bobPhase += 0.18;
+    player.footstepTimer -= dt;
+  }
 }
 
-// ─── Clamp entity to canvas playfield (below UI bar) ──────────────
-function clampToField(entity) {
-  var minX = 2;
-  var minY = UI_BAR_H + 2;
-  var maxX = CANVAS_SIZE - entity.width  - 2;
-  var maxY = CANVAS_SIZE - entity.height - 2;
-  entity.x = Math.max(minX, Math.min(maxX, entity.x));
-  entity.y = Math.max(minY, Math.min(maxY, entity.y));
+function rotatePlayer(player, angle) {
+  var cos = Math.cos(angle);
+  var sin = Math.sin(angle);
+  var dx  = player.dirX  * cos - player.dirY  * sin;
+  var dy  = player.dirX  * sin + player.dirY  * cos;
+  var px  = player.planeX * cos - player.planeY * sin;
+  var py  = player.planeX * sin + player.planeY * cos;
+  player.dirX = dx; player.dirY = dy;
+  player.planeX = px; player.planeY = py;
+}
+
+// ── Proximity ─────────────────────────────────────────────────────────────────
+
+function dist2d(ax, ay, bx, by) {
+  var dx = ax - bx, dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function playerDistToExit(player) {
+  return dist2d(player.x, player.y, EXIT.x, EXIT.y);
 }

@@ -1,67 +1,56 @@
-// constants.js
-var CANVAS_SIZE   = 256;
-var TILE_SIZE     = 16;
+var CANVAS_W = 320;
+var CANVAS_H = 200;
+var CSS_SCALE = 3;
 
-// Screen states
-var SCREEN_TITLE      = 'title';
-var SCREEN_TEAM       = 'team';
-var SCREEN_CHAR       = 'char';
-var SCREEN_ROOM_INTRO = 'room_intro';
-var SCREEN_GAMEPLAY   = 'gameplay';
-var SCREEN_WIN        = 'win';
-var SCREEN_GAMEOVER   = 'gameover';
+// Screens
+var SCREEN_TITLE    = 'title';
+var SCREEN_PLAY     = 'play';
+var SCREEN_GAMEOVER = 'gameover';
+var SCREEN_WIN      = 'win';
 
-// Game phases (during SCREEN_GAMEPLAY)
-var PHASE_SETUP = 'setup';
-var PHASE_HUNT  = 'hunt';
+// Player
+var PLAYER_SPEED     = 0.055;
+var PLAYER_ROT_SPEED = 0.07; // increased for snappier turning
+var PLAYER_RADIUS    = 0.25;
+var MOUSE_SENSITIVITY = 0.002;
 
-// Timers (seconds)
-var SETUP_TIMER          = 10;
-var HUNT_TIMER           = 45;
-var ROOM_INTRO_MS        = 1500;
+// Games Master
+var GM_PATROL_SPEED = 0.018;
+var GM_CHASE_SPEED  = 0.038;
+var GM_SIGHT_DIST   = 9.0;   // tiles
+var GM_CATCH_DIST      = 0.55;  // tiles — game over
+var GM_LOSE_CHASE_MS   = 4000;  // ms without LOS before GM returns to patrol
 
-// Speeds (px/frame)
-var PLAYER_SPEED_BASE    = 2.0;
-var HUNTER_PATROL_SPEED  = 1.2;
-var HUNTER_INSPECT_SPEED = 1.6;
-var ALLY_MOVE_SPEED      = 1.8;
+// Collectibles
+var PROGRAMS_PER_FLOOR = 7;
+var TOTAL_PROGRAMS     = 28;  // 7 × 4 floors
+var COLLECT_DIST       = 1.1; // tiles
+var EXIT_DIST          = 1.5; // tiles — stair / front-door interaction range
 
-// Suspicion
-var SUSPICION_MAX            = 100;
-var SUSPICION_MOVE_RATE      = 5;    // /s: moving while transformed in sight cone
-var SUSPICION_INSPECT_RATE   = 3;    // /s: hunter actively inspecting player object
-var SUSPICION_DRAIN_RATE     = 1;    // /s: passive drain when still
-var SUSPICION_DRAIN_FAR      = 2;    // /s: bonus drain when hunter > FAR threshold
-var SUSPICION_RETRANSFORM    = 10;   // flat penalty per retransform during hunt
-var SUSPICION_ZONE_GOOD_MULT = 0.3;
-var SUSPICION_ZONE_BAD_MULT  = 2.0;
+// GM floor-change cadence
+var GM_FLOOR_CHANGE_MS = 30000; // ~30 s before GM moves to another floor
 
-// Hunter
-var HUNTER_SIGHT_RANGE     = 80;              // px (5 tiles)
-var HUNTER_SIGHT_HALF_ARC  = Math.PI / 4;    // 45° each side = 90° cone
-var HUNTER_INSPECT_RANGE   = 20;             // px: begin eval pause when within this
-var HUNTER_INSPECT_MS      = 1500;           // ms: pause duration at object
-var HUNTER_NOTICE_MS       = 600;            // ms: "?" pause before walking
-var HUNTER_FAR_DIST        = 80;             // px: threshold for drain bonus
-var HUNTER_INSPECT_CHANCE  = 0.006;          // per-frame chance to pick an object
+// Rendering
+var FOV_HALF_PLANE = 0.66;  // camera plane magnitude → ~66° FOV
+var MAX_RAY_DEPTH  = 24;
 
-// Hunter AI states
-var HUNTER_ENTERING   = 'entering';
-var HUNTER_PATROLLING = 'patrolling';
-var HUNTER_NOTICING   = 'noticing';
-var HUNTER_INSPECTING = 'inspecting';
-var HUNTER_ACCUSING   = 'accusing';
-var HUNTER_RETURNING  = 'returning';
+// Wall type IDs
+var WALL_STONE   = 1;  // outer stone — dark grey
+var WALL_PLASTER = 2;  // auditorium plaster — dusty beige
+var WALL_CURTAIN = 3;  // stage curtain wall — deep crimson
+var WALL_BRICK   = 4;  // backstage brick — dark rust
+var WALL_WOOD    = 5;  // dressing room wood — brown
 
-// Scoring
-var SCORE_BASE              = 100;
-var SCORE_PER_SECOND        = 2;
-var SCORE_ALLY_BONUS        = 10;
-var SCORE_STILL_BONUS       = 25;   // never moved while transformed during hunt
-var SCORE_NO_RETRANSFORM    = 15;   // never retransformed during hunt
-var SCORE_GOOD_ZONE_BONUS   = 20;   // was in a good zone when hunt ended
+// Wall base colors [r, g, b]
+var WALL_COLORS = {
+  1: [38, 34, 42],
+  2: [55, 48, 38],
+  3: [72, 10, 10],
+  4: [50, 25, 15],
+  5: [42, 28, 14]
+};
 
-// UI
-var UI_BAR_H     = 20;   // px: top HUD bar height
-var MINIMAP_W    = 48;
-var MINIMAP_H    = 48;
+// Atmosphere
+var FLOOR_COLOR   = [8, 6, 8];
+var CEILING_COLOR = [4, 3, 6];
+var FOG_DIST      = 12.0;  // tiles until full black fog

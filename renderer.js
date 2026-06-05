@@ -1,332 +1,356 @@
-// renderer.js — all canvas drawing
+// All non-raycasting draw calls: HUD, screens, vignette
 
-var _imgCache = {};
-
-function _loadImg(src) {
-  if (!_imgCache[src]) {
-    var img = new Image();
-    img.src = src;
-    _imgCache[src] = img;
-  }
-  return _imgCache[src];
-}
-
-// Draws img at (x,y,w,h) if loaded; falls back to filled rect with color.
-function _drawImgOrRect(ctx, src, x, y, w, h, color) {
-  if (src) {
-    var img = _loadImg(src);
-    if (img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, x, y, w, h);
-      return;
-    }
-  }
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
-}
-
-// ─── Room ────────────────────────────────────────────────────────
-function drawRoom(ctx, room) {
-  ctx.fillStyle = room.bgColor;
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  var props = room.staticProps;
-  for (var i = 0; i < props.length; i++) {
-    var p = props[i];
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x, p.y, p.w, p.h);
-  }
-}
-
-// ─── Entities ────────────────────────────────────────────────────
-function drawPlayer(ctx, player) {
-  if (!player.alive) return;
-  var x = Math.round(player.x);
-  var y = Math.round(player.y);
-
-  if (player.isTransformed) {
-    var obj = OBJECTS[player.objIdx];
-    _drawImgOrRect(ctx, obj.sprite, x, y, obj.w, obj.h, obj.color);
-    // Faint team-color border to indicate it's the player
-    ctx.strokeStyle = player.team.color;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, obj.w, obj.h);
+// ── Title screen ─────────────────────────────────────────────────────────────
+function drawTitle(ctx) {
+  var bg = SPRITE_TEXTURES['screen-title'];
+  if (bg) {
+    ctx.drawImage(bg.canvas, 0, 0, CANVAS_W, CANVAS_H);
   } else {
-    ctx.fillStyle = player.team.color;
-    ctx.fillRect(x, y, player.width, player.height);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '5px "Press Start 2P"';
-    ctx.textAlign = 'center';
-    ctx.fillText(player.char.label, x + player.width/2, y + player.height/2 + 2);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }
-}
 
-function drawHunter(ctx, hunter) {
-  var x = Math.round(hunter.x);
-  var y = Math.round(hunter.y);
-  ctx.fillStyle = hunter.team.color;
-  ctx.fillRect(x, y, hunter.width, hunter.height);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '5px "Press Start 2P"';
+  // Dark gradient band so text is legible over the image
+  var grad = ctx.createLinearGradient(0, 20, 0, CANVAS_H);
+  grad.addColorStop(0,   'rgba(0,0,0,0.72)');
+  grad.addColorStop(0.4, 'rgba(0,0,0,0.0)');
+  grad.addColorStop(0.7, 'rgba(0,0,0,0.0)');
+  grad.addColorStop(1,   'rgba(0,0,0,0.8)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Title
+  ctx.fillStyle = '#c0a060';
+  ctx.font = 'bold 20px "Press Start 2P", serif';
   ctx.textAlign = 'center';
-  ctx.fillText('H', x + hunter.width/2, y + hunter.height/2 + 2);
+  ctx.fillText('GAMES MASTER', CANVAS_W / 2, 36);
 
-  // "?" indicator during NOTICING
-  if (hunter.state === HUNTER_NOTICING) {
-    ctx.fillStyle = '#ffff00';
-    ctx.font = '8px "Press Start 2P"';
-    ctx.fillText('?', x + hunter.width/2, y - 3);
-  }
-}
+  ctx.fillStyle = '#8a7050';
+  ctx.font = '14px "VT323", monospace';
+  ctx.fillText('Collect 7 programs on each of the 4 floors.', CANVAS_W / 2, 152);
+  ctx.fillText('Avoid The Games Master. Escape through the front doors.', CANVAS_W / 2, 165);
 
-function drawAlly(ctx, ally) {
-  if (!ally.alive) return;
-  var x = Math.round(ally.x);
-  var y = Math.round(ally.y);
+  ctx.fillStyle = '#555548';
+  ctx.font = '13px "VT323", monospace';
+  ctx.fillText('W/S = move  ·  A/D = strafe  ·  Q/E or mouse = turn', CANVAS_W / 2, 178);
 
-  if (ally.isTransformed) {
-    var obj = OBJECTS[ally.objIdx];
-    ctx.globalAlpha = 0.6;
-    _drawImgOrRect(ctx, obj.sprite, x, y, obj.w, obj.h, obj.color);
-    ctx.globalAlpha = 1.0;
-  } else {
-    ctx.globalAlpha = 0.7;
-    ctx.fillStyle = ally.team.color;
-    ctx.fillRect(x, y, ally.width, ally.height);
-    ctx.globalAlpha = 1.0;
-  }
-}
-
-// ─── UI overlay (drawn on top every frame) ───────────────────────
-function drawUI(ctx, gs) {
-  // Top bar background
-  ctx.fillStyle = 'rgba(0,0,0,0.85)';
-  ctx.fillRect(0, 0, CANVAS_SIZE, UI_BAR_H);
-
-  // Phase label
-  ctx.fillStyle = gs.phase === PHASE_SETUP ? '#44ff44' : '#ff4444';
-  ctx.font = '5px "Press Start 2P"';
-  ctx.textAlign = 'left';
-  ctx.fillText(gs.phase === PHASE_SETUP ? 'SETUP' : 'HUNT', 3, 13);
-
-  // Timer
-  var timerMs  = gs.phase === PHASE_SETUP ? gs.setupTimer : gs.huntTimer;
-  var timerSec = Math.ceil(timerMs / 1000);
-  ctx.fillStyle = timerSec <= 10 ? '#ff4444' : '#ffffff';
-  ctx.textAlign = 'center';
-  ctx.fillText(timerSec + 's', CANVAS_SIZE / 2, 13);
-
-  // Suspicion bar (right side)
-  var barW  = 60;
-  var barH  = 7;
-  var barX  = CANVAS_SIZE - barW - 3;
-  var barY  = 6;
-  var pct   = gs.suspicion / SUSPICION_MAX;
-  ctx.fillStyle = '#333333';
-  ctx.fillRect(barX, barY, barW, barH);
-  ctx.fillStyle = pct > 0.7 ? '#ff2222' : pct > 0.4 ? '#ffaa00' : '#22cc22';
-  ctx.fillRect(barX, barY, Math.round(barW * pct), barH);
-  ctx.strokeStyle = '#888888';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(barX, barY, barW, barH);
-
-  // Current object name (bottom strip during gameplay)
-  if (gs.screen === SCREEN_GAMEPLAY) {
-    var obj = OBJECTS[gs.player.objIdx];
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(0, CANVAS_SIZE - 12, CANVAS_SIZE, 12);
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '4px "Press Start 2P"';
-    ctx.textAlign = 'center';
-    var prefix = gs.player.isTransformed ? '[DISGUISED]' : '[SPACE to disguise]';
-    ctx.fillText(prefix + ' ' + (gs.player.objIdx + 1) + ':' + obj.label, CANVAS_SIZE/2, CANVAS_SIZE - 3);
-  }
-}
-
-// ─── Mini-map ────────────────────────────────────────────────────
-function drawMiniMap(ctx, gs) {
-  var mx = CANVAS_SIZE - MINIMAP_W - 3;
-  var my = CANVAS_SIZE - MINIMAP_H - 14;  // above bottom strip
-
-  // Background
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(mx, my, MINIMAP_W, MINIMAP_H);
-  ctx.strokeStyle = '#555555';
-  ctx.lineWidth = 0.5;
-  ctx.strokeRect(mx, my, MINIMAP_W, MINIMAP_H);
-
-  var scaleX = MINIMAP_W / CANVAS_SIZE;
-  var scaleY = MINIMAP_H / CANVAS_SIZE;
-
-  function dot(entity, color, alpha) {
-    var dx = mx + (entity.x + entity.width/2)  * scaleX;
-    var dy = my + (entity.y + entity.height/2) * scaleY;
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    ctx.fillRect(dx - 1, dy - 1, 2, 2);
-    ctx.globalAlpha = 1;
-  }
-
-  // Hunter
-  if (gs.hunter) dot(gs.hunter, gs.hunter.team.color, 1.0);
-
-  // Allies
-  for (var i = 0; i < gs.allies.length; i++) {
-    if (gs.allies[i].alive) dot(gs.allies[i], gs.player.team.color, 0.6);
-  }
-
-  // Player dot — visible during setup only
-  if (gs.phase === PHASE_SETUP) {
-    dot(gs.player, gs.player.team.color, 1.0);
-  }
-}
-
-// ─── Screen renderers ────────────────────────────────────────────
-function drawTitle(ctx, gs) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  _drawImgOrRect(ctx, 'Assets/screens/screen-title-no-text.png', 0, 0, CANVAS_SIZE, CANVAS_SIZE, '#000000');
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '10px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('HIDE', CANVAS_SIZE/2, 80);
-  ctx.font = '5px "Press Start 2P"';
-  ctx.fillStyle = '#aaaaaa';
-  ctx.fillText('A disguise game', CANVAS_SIZE/2, 100);
-  var blink = Math.floor(Date.now() / 500) % 2 === 0;
+  var blink = Math.floor(Date.now() / 600) % 2 === 0;
   if (blink) {
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('PRESS ENTER', CANVAS_SIZE/2, 160);
+    ctx.fillStyle = '#c0a060';
+    ctx.font = 'bold 10px "Press Start 2P", monospace';
+    ctx.fillText('PRESS ENTER TO BEGIN', CANVAS_W / 2, 193);
   }
 }
 
-function drawTeamSelect(ctx, gs) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '6px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('SELECT TEAM', CANVAS_SIZE/2, 30);
+// ── Game Over ─────────────────────────────────────────────────────────────────
+function drawGameOver(ctx) {
+  var bg = SPRITE_TEXTURES['screen-gameover'];
+  if (bg) {
+    ctx.drawImage(bg.canvas, 0, 0, CANVAS_W, CANVAS_H);
+  } else {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
 
-  var teams = gs.teamData;
-  for (var i = 0; i < teams.length; i++) {
-    var tx = i === 0 ? 64 : 192;
-    var selected = gs.selTeamIdx === i;
-    ctx.fillStyle = selected ? teams[i].color : '#444444';
-    ctx.fillRect(tx - 40, 60, 80, 80);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '7px "Press Start 2P"';
-    ctx.fillText(teams[i].name, tx, 108);
-    if (selected) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(tx - 42, 58, 84, 84);
+  // Dark band at top and bottom for text
+  var grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  grad.addColorStop(0,   'rgba(0,0,0,0.82)');
+  grad.addColorStop(0.3, 'rgba(0,0,0,0.0)');
+  grad.addColorStop(0.7, 'rgba(0,0,0,0.0)');
+  grad.addColorStop(1,   'rgba(0,0,0,0.82)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  ctx.fillStyle = '#cc0000';
+  ctx.font = 'bold 16px "Press Start 2P", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('THE PERFORMANCE', CANVAS_W / 2, 26);
+  ctx.fillText('IS OVER.', CANVAS_W / 2, 46);
+
+  var blink = Math.floor(Date.now() / 600) % 2 === 0;
+  if (blink) {
+    ctx.fillStyle = '#884444';
+    ctx.font = '14px "VT323", monospace';
+    ctx.fillText('PRESS R TO TRY AGAIN', CANVAS_W / 2, 193);
+  }
+}
+
+// ── Win screen ────────────────────────────────────────────────────────────────
+function drawWin(ctx) {
+  var bg = SPRITE_TEXTURES['screen-win'];
+  if (bg) {
+    ctx.drawImage(bg.canvas, 0, 0, CANVAS_W, CANVAS_H);
+  } else {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
+
+  // Dark bands for text legibility
+  var grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+  grad.addColorStop(0,   'rgba(0,0,0,0.78)');
+  grad.addColorStop(0.3, 'rgba(0,0,0,0.0)');
+  grad.addColorStop(0.7, 'rgba(0,0,0,0.0)');
+  grad.addColorStop(1,   'rgba(0,0,0,0.78)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  ctx.fillStyle = '#c0a060';
+  ctx.font = 'bold 14px "Press Start 2P", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CURTAIN CALL', CANVAS_W / 2, 26);
+
+  ctx.fillStyle = '#8a7040';
+  ctx.font = '15px "VT323", monospace';
+  ctx.fillText('All 28 programs. All 4 floors. You escaped.', CANVAS_W / 2, 44);
+
+  var blink = Math.floor(Date.now() / 600) % 2 === 0;
+  if (blink) {
+    ctx.fillStyle = '#c0a060';
+    ctx.font = '14px "VT323", monospace';
+    ctx.fillText('PRESS R TO PLAY AGAIN', CANVAS_W / 2, 193);
+  }
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD(ctx, gs) {
+  var floorIdx  = gs.currentFloor;
+  var floorDone = floorCollectedCount(floorIdx);
+  var allDone   = totalCollected();
+
+  // Top bar
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(0, 0, CANVAS_W, 20);
+
+  // Floor name — left
+  ctx.fillStyle = '#806040';
+  ctx.font = '10px "VT323", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(FLOORS[floorIdx].name.toUpperCase(), 4, 14);
+
+  // Per-floor program pips — center
+  var pipTotal = PROGRAMS_PER_FLOOR;
+  var pipW = pipTotal * 9 - 2;
+  var pipStartX = Math.round((CANVAS_W - pipW) / 2);
+  for (var j = 0; j < pipTotal; j++) {
+    ctx.fillStyle = PROGRAMS[j].collected ? '#c0a060' : '#2a2a2a';
+    ctx.fillRect(pipStartX + j * 9, 7, 7, 7);
+  }
+
+  // Global count — right
+  ctx.fillStyle = '#806040';
+  ctx.font = '10px "VT323", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText(allDone + '/' + totalPrograms(), CANVAS_W - 4, 14);
+
+  // GM warning — right, second line
+  var onSameFloor = gs.gm.floor === floorIdx;
+  var gmDist = onSameFloor ? dist2d(gs.player.x, gs.player.y, gs.gm.x, gs.gm.y) : 99;
+  var flash = Math.floor(Date.now() / 300) % 2 === 0;
+  ctx.font = 'bold 11px "VT323", monospace';
+  ctx.textAlign = 'right';
+  if (gs.gm.state === 'chase' && onSameFloor) {
+    if (flash) { ctx.fillStyle = '#ff2200'; ctx.fillText('RUN', CANVAS_W - 4, 13); }
+  } else if (onSameFloor && gmDist < 6) {
+    var danger = Math.max(0, 1 - (gmDist - 1) / 5);
+    if (flash && danger > 0.2) {
+      ctx.fillStyle = 'rgba(200,80,0,' + danger.toFixed(2) + ')';
+      ctx.fillText("DON'T LOOK", CANVAS_W - 4, 13);
     }
   }
 
-  ctx.fillStyle = '#888888';
-  ctx.font = '4px "Press Start 2P"';
-  ctx.fillText('A/D to choose  ENTER to confirm', CANVAS_SIZE/2, 200);
+  // Bottom bar
+  ctx.fillStyle = 'rgba(0,0,0,0.82)';
+  ctx.fillRect(0, CANVAS_H - 18, CANVAS_W, 18);
+  ctx.font = '13px "VT323", monospace';
+  ctx.textAlign = 'center';
+
+  // Priority: collect > stair prompt > all-collected escape
+  var nearProg = _nearestProgram(gs.player);
+  if (nearProg !== null) {
+    ctx.fillStyle = '#c0a060';
+    ctx.fillText('[Space]  ' + PROGRAMS[nearProg].label, CANVAS_W / 2, CANVAS_H - 4);
+  } else {
+    var nearExit = _nearestExit(gs.player, floorIdx);
+    if (nearExit !== null) {
+      var pulse = Math.floor(Date.now() / 500) % 2 === 0;
+      ctx.fillStyle = pulse ? '#88ccff' : '#4488aa';
+      ctx.fillText('[Space]  ' + nearExit.label, CANVAS_W / 2, CANVAS_H - 4);
+    } else if (allDone === totalPrograms() && floorIdx === 0) {
+      var p2 = Math.floor(Date.now() / 500) % 2 === 0;
+      ctx.fillStyle = p2 ? '#c0ff80' : '#80c040';
+      ctx.fillText('ALL FOUND  —  REACH THE FRONT DOORS', CANVAS_W / 2, CANVAS_H - 4);
+    } else {
+      // quiet hint
+      ctx.fillStyle = '#2a2a2a';
+      ctx.fillText(floorDone + ' / 7 programs on this floor', CANVAS_W / 2, CANVAS_H - 4);
+    }
+  }
 }
 
-function drawCharSelect(ctx, gs) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  var team = gs.teamData[gs.selTeamIdx];
-  ctx.fillStyle = team.color;
-  ctx.font = '6px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText(team.name, CANVAS_SIZE/2, 24);
+// ── Vignette / fear effect ────────────────────────────────────────────────────
+function drawVignette(ctx, gs) {
+  var onSameFloor = gs.gm.floor === gs.currentFloor;
+  if (!onSameFloor) return;
+  var gmDist = dist2d(gs.player.x, gs.player.y, gs.gm.x, gs.gm.y);
+  var intensity = Math.max(0, 1 - (gmDist - 0.5) / 5);
+  intensity = intensity * intensity;
 
-  var chars = team.characters;
-  for (var i = 0; i < chars.length; i++) {
-    var col = i % 2;
-    var row = Math.floor(i / 2);
-    var cx  = 64 + col * 128;
-    var cy  = 50 + row * 80;
-    var sel = gs.selCharIdx === i;
-    ctx.fillStyle = sel ? team.color : '#333333';
-    ctx.fillRect(cx - 30, cy, 60, 50);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '8px "Press Start 2P"';
-    ctx.textAlign = 'center';
-    ctx.fillText(chars[i].label, cx, cy + 30);
-    ctx.font = '4px "Press Start 2P"';
-    ctx.fillStyle = '#aaaaaa';
-    ctx.fillText('SPD:' + (chars[i].speedMult * 10 | 0), cx - 14, cy + 44);
-    ctx.fillText('HID:' + (chars[i].hideMult  * 10 | 0), cx + 14, cy + 44);
-    if (sel) {
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(cx - 31, cy - 1, 62, 52);
+  if (intensity < 0.02) return;
+
+  var grad = ctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.25,
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.85
+  );
+  var r = Math.round(120 * intensity);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(' + r + ',0,0,' + (0.7 * intensity).toFixed(2) + ')');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+}
+
+// ── Pickup flash ──────────────────────────────────────────────────────────────
+function drawPickupFlash(ctx, gs) {
+  if (!gs.pickupFlash || gs.pickupFlash <= 0) return;
+  var alpha = gs.pickupFlash / 300;
+
+  // Gold screen tint
+  ctx.fillStyle = 'rgba(200,160,60,' + (alpha * 0.25).toFixed(2) + ')';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Program booklet art centred on screen
+  var tex = SPRITE_TEXTURES['program-full'];
+  if (tex) {
+    var size = Math.round(CANVAS_H * 0.55);
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(tex.canvas,
+      (CANVAS_W - size) / 2, (CANVAS_H - size) / 2,
+      size, size);
+    ctx.globalAlpha = 1.0;
+  }
+}
+
+// ── Map overlay (Tab hold) ────────────────────────────────────────────────────
+function drawMinimap(ctx, gs) {
+  if (!gs.showMap) return;
+  _drawFullMap(ctx, gs);
+}
+
+function _drawFullMap(ctx, gs) {
+  var T  = 5;
+  var mw = MAP_W * T;
+  var mh = MAP_H * T;
+  var ox = Math.round((CANVAS_W - mw) / 2);
+  var oy = Math.round((CANVAS_H - mh) / 2);
+  var fl = gs.currentFloor;
+
+  // Dim the scene behind the map
+  ctx.fillStyle = 'rgba(0,0,0,0.86)';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  // Countdown
+  var secs = Math.max(0, gs.mapTimeLeft / 1000).toFixed(1);
+  ctx.font = '13px "VT323", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = gs.mapTimeLeft < 1000 ? '#ff4400' : '#806040';
+  ctx.fillText('MAP  ' + secs + 's', CANVAS_W / 2, oy - 3);
+
+  // Map background
+  ctx.fillStyle = '#0a0806';
+  ctx.fillRect(ox - 1, oy - 1, mw + 2, mh + 2);
+
+  // Walls
+  var flM = FLOORS[fl].map;
+  for (var row = 0; row < MAP_H; row++) {
+    for (var col = 0; col < MAP_W; col++) {
+      var cell = flM[row][col];
+      if (cell === 0) continue;
+      var wc = WALL_COLORS[cell] || [60, 60, 60];
+      ctx.fillStyle = 'rgb(' + (wc[0] + 40) + ',' + (wc[1] + 40) + ',' + (wc[2] + 40) + ')';
+      ctx.fillRect(ox + col * T, oy + row * T, T, T);
     }
   }
 
-  ctx.fillStyle = '#888888';
-  ctx.font = '4px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('W/S choose  ENTER confirm', CANVAS_SIZE/2, 226);
-}
-
-function drawRoomIntro(ctx, gs) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '8px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText(gs.room.label.toUpperCase(), CANVAS_SIZE/2, CANVAS_SIZE/2 - 8);
-  ctx.font = '5px "Press Start 2P"';
-  ctx.fillStyle = '#888888';
-  ctx.fillText('Get ready...', CANVAS_SIZE/2, CANVAS_SIZE/2 + 10);
-}
-
-function drawGameplay(ctx, gs) {
-  drawRoom(ctx, gs.room);
-  for (var i = 0; i < gs.allies.length; i++) drawAlly(ctx, gs.allies[i]);
-  // Hunter is hidden during setup — it waits off-screen at hunterEntry
-  if (gs.hunter && gs.phase === PHASE_HUNT) drawHunter(ctx, gs.hunter);
-  drawPlayer(ctx, gs.player);
-  drawUI(ctx, gs);
-  drawMiniMap(ctx, gs);
-}
-
-function drawWin(ctx, gs) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  _drawImgOrRect(ctx, 'Assets/screens/screen-survived-no-text.png', 0, 0, CANVAS_SIZE, CANVAS_SIZE, '#000000');
-  ctx.fillStyle = '#44ff44';
-  ctx.font = '8px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('SURVIVED!', CANVAS_SIZE/2, 80);
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '6px "Press Start 2P"';
-  ctx.fillText('SCORE: ' + gs.score, CANVAS_SIZE/2, 110);
-  ctx.font = '4px "Press Start 2P"';
-  ctx.fillStyle = '#aaaaaa';
-  ctx.fillText('PRESS R TO PLAY AGAIN', CANVAS_SIZE/2, 180);
-}
-
-function drawGameOver(ctx, gs) {
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  _drawImgOrRect(ctx, 'Assets/screens/screen-found-no-text.png', 0, 0, CANVAS_SIZE, CANVAS_SIZE, '#000000');
-  ctx.fillStyle = '#ff2222';
-  ctx.font = '8px "Press Start 2P"';
-  ctx.textAlign = 'center';
-  ctx.fillText('YOU WERE FOUND', CANVAS_SIZE/2, 80);
-  ctx.fillStyle = '#888888';
-  ctx.font = '4px "Press Start 2P"';
-  ctx.fillText('PRESS R TO TRY AGAIN', CANVAS_SIZE/2, 180);
-}
-
-// ─── Main render dispatch ─────────────────────────────────────────
-function drawFrame(ctx, gs) {
-  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-  switch (gs.screen) {
-    case SCREEN_TITLE:      drawTitle(ctx, gs);      break;
-    case SCREEN_TEAM:       drawTeamSelect(ctx, gs); break;
-    case SCREEN_CHAR:       drawCharSelect(ctx, gs); break;
-    case SCREEN_ROOM_INTRO: drawRoomIntro(ctx, gs);  break;
-    case SCREEN_GAMEPLAY:   drawGameplay(ctx, gs);   break;
-    case SCREEN_WIN:        drawWin(ctx, gs);        break;
-    case SCREEN_GAMEOVER:   drawGameOver(ctx, gs);   break;
+  // Stairs — blue squares
+  var exits = FLOORS[fl].exits;
+  for (var e = 0; e < exits.length; e++) {
+    var ex = exits[e];
+    ctx.fillStyle = '#4499ff';
+    ctx.fillRect(ox + Math.round(ex.x * T) - 2, oy + Math.round(ex.y * T) - 2, 5, 5);
   }
+
+  // Uncollected programs — gold squares
+  for (var i = 0; i < PROGRAMS.length; i++) {
+    if (PROGRAMS[i].collected) continue;
+    ctx.fillStyle = '#c0a060';
+    ctx.fillRect(ox + Math.round(PROGRAMS[i].x * T) - 2, oy + Math.round(PROGRAMS[i].y * T) - 2, 4, 4);
+  }
+
+  // Games Master — red, pulses when chasing
+  if (gs.gm.floor === fl) {
+    var gmFlash = gs.gm.state !== 'chase' || Math.floor(Date.now() / 180) % 2 === 0;
+    if (gmFlash) {
+      ctx.fillStyle = 'rgba(255,0,0,0.35)';
+      ctx.fillRect(ox + Math.round(gs.gm.x * T) - 3, oy + Math.round(gs.gm.y * T) - 3, 7, 7);
+      ctx.fillStyle = '#ff2200';
+      ctx.fillRect(ox + Math.round(gs.gm.x * T) - 2, oy + Math.round(gs.gm.y * T) - 2, 4, 4);
+    }
+  }
+
+  // Player — white
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(ox + Math.round(gs.player.x * T) - 2, oy + Math.round(gs.player.y * T) - 2, 4, 4);
+  // Facing direction tick
+  ctx.fillStyle = '#88ff88';
+  ctx.fillRect(
+    ox + Math.round(gs.player.x * T) + Math.round(gs.player.dirX * 3),
+    oy + Math.round(gs.player.y * T) + Math.round(gs.player.dirY * 3),
+    2, 2
+  );
+
+  // Map border
+  ctx.strokeStyle = '#2a1f0e';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(ox - 1, oy - 1, mw + 2, mh + 2);
+
+  // Legend — centred below map
+  var ly = oy + mh + 13;
+  ctx.font = '11px "VT323", monospace';
+  ctx.textAlign = 'center';
+
+  var gmOnFloor = gs.gm.floor === fl;
+  var legendItems = [
+    { color: '#ffffff', label: 'YOU' },
+    { color: gmOnFloor ? '#ff2200' : '#442200', label: gmOnFloor ? 'GAMES MASTER' : 'GM (other floor)' },
+    { color: '#c0a060', label: 'PROGRAM' },
+    { color: '#4499ff', label: 'STAIRS' },
+  ];
+
+  var totalW = legendItems.length * 70;
+  var lx = Math.round(CANVAS_W / 2 - totalW / 2) + 8;
+  ctx.textAlign = 'left';
+  for (var li = 0; li < legendItems.length; li++) {
+    ctx.fillStyle = legendItems[li].color;
+    ctx.fillRect(lx, ly - 7, 6, 6);
+    ctx.fillStyle = gmOnFloor || li !== 1 ? '#888' : '#555';
+    ctx.fillText(' ' + legendItems[li].label, lx + 6, ly);
+    lx += 70;
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function _nearestProgram(player) {
+  for (var i = 0; i < PROGRAMS.length; i++) {
+    if (PROGRAMS[i].collected) continue;
+    if (dist2d(player.x, player.y, PROGRAMS[i].x, PROGRAMS[i].y) < COLLECT_DIST) return i;
+  }
+  return null;
+}
+
+function _nearestExit(player, floorIdx) {
+  var exits = FLOORS[floorIdx].exits;
+  for (var i = 0; i < exits.length; i++) {
+    var ex = exits[i];
+    if (dist2d(player.x, player.y, ex.x + 0.5, ex.y + 0.5) < EXIT_DIST) return ex;
+  }
+  return null;
 }
