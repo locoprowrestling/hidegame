@@ -23,25 +23,45 @@ body {
 
 #mobileBlock {
   display: none;
-  flex-direction: column;
+  position: fixed;
+  inset: 0;
   align-items: center;
   justify-content: center;
-  gap: 1.4em;
-  width: 100%;
-  height: 100%;
-  color: #c8a84a;
+}
+
+#mobileBlock-bg {
+  position: absolute;
+  inset: 0;
+  background: url('assets/screens/title.png') center center / cover no-repeat;
+  image-rendering: pixelated;
+  filter: brightness(0.45);
+}
+
+#mobileBlock-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2em;
   text-align: center;
   padding: 2em;
+  /* dark card so text is legible over the bg */
+  background: rgba(0,0,0,0.55);
+  border: 1px solid #4a3a18;
+  max-width: 90vw;
 }
 
-#mobileBlock p:first-child {
+.mb-title {
   font-family: 'Press Start 2P', monospace;
-  font-size: clamp(1.2rem, 6vw, 2.2rem);
-  letter-spacing: 0.05em;
+  font-size: clamp(1rem, 5.5vw, 2rem);
+  color: #c8a84a;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
 }
 
-#mobileBlock p:not(:first-child) {
+.mb-sub {
   font-family: 'VT323', monospace;
-  font-size: clamp(1.4rem, 7vw, 2.4rem);
-  color: #888;
+  font-size: clamp(1.3rem, 6vw, 2rem);
+  color: #998860;
+  line-height: 1.3;
 }
