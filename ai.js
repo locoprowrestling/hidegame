@@ -43,9 +43,7 @@ function updateGM(gm, player, playerFloor, dt) {
 
   if (gm.state === 'patrol') {
     _gmPatrol(gm);
-    var hasSight = _gmHasSight(gm, player);
-    var tooClose = dist2d(gm.x, gm.y, player.x, player.y) < GM_PROX_DIST;
-    if (hasSight && (tooClose || _playerLooksAtGM(player, gm))) {
+    if (_playerLooksAtGM(player, gm) && _gmHasSight(gm, player)) {
       gm.state        = 'chase';
       gm.lostSightMs  = 0;
       gm.lastKnownX   = player.x;

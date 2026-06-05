@@ -18,7 +18,6 @@ var MOUSE_SENSITIVITY = 0.002;
 var GM_PATROL_SPEED = 0.018;
 var GM_CHASE_SPEED  = 0.038;
 var GM_SIGHT_DIST      = 9.0;   // tiles — look-trigger detection range
-var GM_PROX_DIST       = 3.5;   // tiles — always detects player within this, no look required
 var GM_CATCH_DIST      = 0.55;  // tiles — game over
 var GM_LOSE_CHASE_MS   = 4000;  // ms without LOS before GM moves to last-known pos
 var GM_SEARCH_MS       = 5000;  // ms spent walking to last-known pos before patrolling
