@@ -23,8 +23,8 @@ function _loadTex(src, cb) {
 }
 
 // Sprite textures are stored as canvases (used with drawImage, not pixel arrays).
-// If the image has no alpha channel (all pixels fully opaque), white pixels are
-// keyed out so white-background PNGs render correctly as transparent sprites.
+// Background removal: flood-fill from all four border edges, keying out any
+// near-white pixel reachable from the border. Interior bright pixels are safe.
 function _loadSprite(src, key) {
   var img = new Image();
   img.onload = function() {
@@ -34,11 +34,48 @@ function _loadSprite(src, key) {
     cx.drawImage(img, 0, 0);
     var id = cx.getImageData(0, 0, c.width, c.height);
     var d = id.data;
-    // Key out fully-opaque near-white pixels regardless of whether other pixels
-    // have transparency — handles white-background PNGs with anti-aliased edges
-    for (var i = 0; i < d.length; i += 4) {
-      if (d[i+3] === 255 && d[i] > 240 && d[i+1] > 240 && d[i+2] > 240) d[i+3] = 0;
+    var w = c.width, h = c.height;
+
+    // Check if the image already has meaningful transparency — if so, skip keying
+    var hasAlpha = false;
+    for (var i = 3; i < d.length; i += 4) {
+      if (d[i] < 200) { hasAlpha = true; break; }
     }
+
+    if (!hasAlpha) {
+      var visited = new Uint8Array(w * h);
+      var queue = [];
+      function nearWhite(p) {
+        var i = p * 4;
+        var r = d[i], g = d[i+1], b = d[i+2];
+        // Neutral grey (low saturation) AND bright — catches white and grey checkerboard
+        var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+        return (mx - mn) < 50 && (r + g + b) > 450;
+      }
+      // Seed from every border pixel
+      for (var bx = 0; bx < w; bx++) {
+        for (var by = 0; by < h; by += (bx === 0 || bx === w - 1) ? 1 : h - 1) {
+          var bp = by * w + bx;
+          if (!visited[bp] && nearWhite(bp)) { visited[bp] = 1; queue.push(bp); }
+        }
+      }
+      // BFS flood-fill
+      while (queue.length) {
+        var p = queue.pop();
+        d[p * 4 + 3] = 0;
+        var px = p % w, py = (p / w) | 0;
+        var ns = [];
+        if (px > 0)     ns.push(p - 1);
+        if (px < w - 1) ns.push(p + 1);
+        if (py > 0)     ns.push(p - w);
+        if (py < h - 1) ns.push(p + w);
+        for (var n = 0; n < ns.length; n++) {
+          if (!visited[ns[n]] && nearWhite(ns[n])) { visited[ns[n]] = 1; queue.push(ns[n]); }
+        }
+      }
+    }
+
     cx.putImageData(id, 0, 0);
     SPRITE_TEXTURES[key] = { canvas: c, w: img.width, h: img.height };
   };
