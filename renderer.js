@@ -229,6 +229,38 @@ function drawPickupFlash(ctx, gs) {
   }
 }
 
+function drawLuckyFlash(ctx, gs) {
+  if (!gs.luckyFlash || gs.luckyFlash <= 0) return;
+  var total = 1800;
+  var t     = gs.luckyFlash / total; // 1 → 0
+
+  // Brief white flash at the moment of catch, fades quickly
+  var flashAlpha = Math.max(0, (t - 0.7) / 0.3) * 0.6;
+  if (flashAlpha > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,' + flashAlpha.toFixed(2) + ')';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
+
+  // "LUCKY" text — drops in from top, holds, fades out
+  var textAlpha = t < 0.2 ? t / 0.2 : Math.min(1, t);
+  ctx.globalAlpha = textAlpha;
+
+  // Glow layer (slightly larger, low opacity)
+  ctx.font      = 'bold 28px "Press Start 2P", monospace';
+  ctx.textAlign = 'center';
+  var cx = CANVAS_W / 2, cy = CANVAS_H * 0.28;
+  ctx.fillStyle = 'rgba(255,220,50,0.35)';
+  ctx.fillText('LUCKY', cx + 1, cy + 1);
+  ctx.fillText('LUCKY', cx - 1, cy - 1);
+
+  // Core text
+  ctx.fillStyle = '#ffe033';
+  ctx.fillText('LUCKY', cx, cy);
+
+  ctx.globalAlpha  = 1.0;
+  ctx.textAlign    = 'left';
+}
+
 // ── Map overlay (Tab hold) ────────────────────────────────────────────────────
 function drawMinimap(ctx, gs) {
   if (!gs.showMap) return;

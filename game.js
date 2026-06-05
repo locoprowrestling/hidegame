@@ -76,10 +76,31 @@ function _fullReset() {
   gs.player       = makePlayer();
   gs.gm           = makeGM();
   gs.pickupFlash      = 0;
+  gs.luckyFlash       = 0;
   gs.flickerAmt       = 0;
   gs.showMap          = false;
   gs.mapUsedThisFloor = false;
   gs.mapTimeLeft      = 0;
+}
+
+// ── Lucky warp ────────────────────────────────────────────────────────────────
+function _gmLuckyWarp(gm, playerFloor) {
+  // Pick a floor that isn't the player's current floor
+  var candidates = [];
+  for (var f = 0; f < FLOORS.length; f++) {
+    if (f !== playerFloor) candidates.push(f);
+  }
+  var dest = candidates[Math.floor(Math.random() * candidates.length)];
+  var spawn = FLOORS[dest].gmPatrol[0];
+  gm.floor       = dest;
+  gm.x           = spawn.x;
+  gm.y           = spawn.y;
+  gm.state       = 'patrol';
+  gm.path        = null;
+  gm.pathIdx     = 0;
+  gm.lostSightMs = 0;
+  gm.searchMs    = 0;
+  gm.floorChangeMs = GM_FLOOR_CHANGE_MS;
 }
 
 // ── Collect ───────────────────────────────────────────────────────────────────
@@ -174,6 +195,7 @@ function loop(ts) {
   updateGM(gs.gm, p, gs.currentFloor, dt);
 
   if (gs.pickupFlash > 0) gs.pickupFlash -= dt;
+  if (gs.luckyFlash  > 0) gs.luckyFlash  -= dt;
 
   gs.flickerTimer -= dt;
   if (gs.flickerTimer <= 0) {
@@ -184,12 +206,17 @@ function loop(ts) {
     gs.flickerTimer = 80 + Math.random() * 120;
   }
 
-  // Lose
+  // Lose — or lucky escape (10%)
   if (gmCaughtPlayer(gs.gm, p, gs.currentFloor)) {
-    playTrack('gameover');
-    gs.screen = SCREEN_GAMEOVER;
-    requestAnimationFrame(loop);
-    return;
+    if (Math.random() < 0.10) {
+      _gmLuckyWarp(gs.gm, gs.currentFloor);
+      gs.luckyFlash = 1800; // ms to display the indicator
+    } else {
+      playTrack('gameover');
+      gs.screen = SCREEN_GAMEOVER;
+      requestAnimationFrame(loop);
+      return;
+    }
   }
 
   // Win
@@ -220,6 +247,7 @@ function loop(ts) {
   drawStairIndicators(ctx, p, gs);
   drawVignette(ctx, gs);
   drawPickupFlash(ctx, gs);
+  drawLuckyFlash(ctx, gs);
   drawHUD(ctx, gs);
   drawMinimap(ctx, gs);
 
