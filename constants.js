@@ -17,9 +17,11 @@ var MOUSE_SENSITIVITY = 0.002;
 // Games Master
 var GM_PATROL_SPEED = 0.018;
 var GM_CHASE_SPEED  = 0.038;
-var GM_SIGHT_DIST   = 9.0;   // tiles
+var GM_SIGHT_DIST      = 9.0;   // tiles — look-trigger detection range
+var GM_PROX_DIST       = 3.5;   // tiles — always detects player within this, no look required
 var GM_CATCH_DIST      = 0.55;  // tiles — game over
-var GM_LOSE_CHASE_MS   = 4000;  // ms without LOS before GM returns to patrol
+var GM_LOSE_CHASE_MS   = 4000;  // ms without LOS before GM moves to last-known pos
+var GM_SEARCH_MS       = 5000;  // ms spent walking to last-known pos before patrolling
 
 // Collectibles
 var PROGRAMS_PER_FLOOR = 7;
@@ -28,7 +30,8 @@ var COLLECT_DIST       = 1.1; // tiles
 var EXIT_DIST          = 1.5; // tiles — stair / front-door interaction range
 
 // GM floor-change cadence
-var GM_FLOOR_CHANGE_MS = 30000; // ~30 s before GM moves to another floor
+var GM_FLOOR_CHANGE_MS = 20000; // ~20 s before GM moves to another floor
+var GM_FOLLOW_PROB     = 0.82;  // probability he moves toward player's floor
 
 // Rendering
 var FOV_HALF_PLANE = 0.66;  // camera plane magnitude → ~66° FOV

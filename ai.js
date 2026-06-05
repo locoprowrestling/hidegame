@@ -26,7 +26,7 @@ function updateGM(gm, player, playerFloor, dt) {
   }
 
   // ── floor-change timer (only outside chase) ──────────────────────────────
-  if (gm.state !== 'chase') {
+  if (gm.state !== 'chase' && gm.state !== 'search') {
     gm.floorChangeMs -= dt;
     if (gm.floorChangeMs <= 0) {
       _gmPlanFloorChange(gm, playerFloor);
@@ -43,21 +43,37 @@ function updateGM(gm, player, playerFloor, dt) {
 
   if (gm.state === 'patrol') {
     _gmPatrol(gm);
-    if (_playerLooksAtGM(player, gm) && _gmHasSight(gm, player)) {
-      gm.state       = 'chase';
-      gm.lostSightMs = 0;
-      gm.path        = null; // discard patrol path
+    var hasSight = _gmHasSight(gm, player);
+    var tooClose = dist2d(gm.x, gm.y, player.x, player.y) < GM_PROX_DIST;
+    if (hasSight && (tooClose || _playerLooksAtGM(player, gm))) {
+      gm.state        = 'chase';
+      gm.lostSightMs  = 0;
+      gm.lastKnownX   = player.x;
+      gm.lastKnownY   = player.y;
+      gm.path         = null;
+    }
+  } else if (gm.state === 'search') {
+    // Walk to last known position, then return to patrol
+    var arrived = _gmFollowPath(gm, gm.lastKnownX, gm.lastKnownY, GM_PATROL_SPEED, 0.5);
+    gm.searchMs = (gm.searchMs || 0) + dt;
+    if (arrived || gm.searchMs >= GM_SEARCH_MS) {
+      gm.state    = 'patrol';
+      gm.searchMs = 0;
+      gm.path     = null;
     }
   } else if (gm.state === 'chase') {
     _gmMoveToward(gm, player.x, player.y, GM_CHASE_SPEED);
     if (_gmHasSight(gm, player)) {
       gm.lostSightMs = 0;
+      gm.lastKnownX  = player.x;
+      gm.lastKnownY  = player.y;
     } else {
       gm.lostSightMs += dt;
       if (gm.lostSightMs >= GM_LOSE_CHASE_MS) {
-        gm.state       = 'patrol';
+        gm.state       = 'search';
         gm.lostSightMs = 0;
-        gm.path        = null; // recompute patrol path from current pos
+        gm.searchMs    = 0;
+        gm.path        = null;
       }
     }
   }
@@ -150,7 +166,7 @@ function _gmPatrol(gm) {
 // ── Floor change ──────────────────────────────────────────────────────────────
 function _gmPlanFloorChange(gm, playerFloor) {
   var delta  = playerFloor > gm.floor ? 1 : playerFloor < gm.floor ? -1 : 0;
-  var target = Math.random() < 0.65
+  var target = Math.random() < GM_FOLLOW_PROB
     ? gm.floor + (delta !== 0 ? delta : (Math.random() < 0.5 ? 1 : -1))
     : gm.floor + (Math.random() < 0.5 ? 1 : -1);
   target = Math.max(0, Math.min(FLOORS.length - 1, target));
