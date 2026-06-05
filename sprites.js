@@ -66,6 +66,14 @@ function _drawSprite(ctx, player, sp, zBuf, horizon, gs) {
   var fog = Math.min(transformY / FOG_DIST, 1.0);
   fog = fog * fog;
 
+  // GM aura — drawn before columns so it sits behind the sprite
+  if (sp.type === 'gm') {
+    var centerCol = Math.max(0, Math.min(CANVAS_W - 1, screenX));
+    if (transformY < zBuf[centerCol]) {
+      _drawGMAura(ctx, screenX, drawStartY, drawEndY, spriteW, spriteH, fog, transformY, horizon);
+    }
+  }
+
   for (var col = drawStartX; col <= drawEndX; col++) {
     if (transformY >= zBuf[col]) continue; // behind wall
 
@@ -77,6 +85,46 @@ function _drawSprite(ctx, player, sp, zBuf, horizon, gs) {
       _drawProgramColumn(ctx, col, drawStartY, drawEndY, texX, fog, transformY);
     }
   }
+}
+
+function _drawGMAura(ctx, screenX, y0, y1, spriteW, spriteH, fog, dist, horizon) {
+  var t = Date.now();
+  // Very slow undulation — out of phase between width and opacity for organic feel
+  var breathe  = 0.5 + 0.5 * Math.sin(t * 0.00061);
+  var flicker  = 0.5 + 0.5 * Math.sin(t * 0.00149);
+  var nearness = Math.max(0, 1 - dist / 7);
+  var baseFade = 1 - fog * 0.6;
+
+  // Outer diffuse haze — tall and wide, very faint
+  var outerW = Math.round(spriteW * (1.9 + 0.3 * breathe));
+  var outerH = Math.round(spriteH * 1.15);
+  ctx.globalAlpha = (0.045 + 0.025 * breathe) * baseFade;
+  ctx.fillStyle = '#3d0000';
+  ctx.fillRect(screenX - (outerW >> 1), y0 - Math.round(spriteH * 0.07), outerW, outerH);
+
+  // Mid aura — tighter, slightly brighter crimson
+  var midW = Math.round(spriteW * (1.3 + 0.15 * flicker));
+  ctx.globalAlpha = (0.07 + 0.03 * flicker) * baseFade;
+  ctx.fillStyle = '#7a0808';
+  ctx.fillRect(screenX - (midW >> 1), y0, midW, y1 - y0);
+
+  // Edge slivers — tight inner glow on the silhouette border, brightens when close
+  ctx.globalAlpha = (0.06 + 0.08 * nearness * breathe) * baseFade;
+  ctx.fillStyle = '#cc1a1a';
+  ctx.fillRect(screenX - (spriteW >> 1) - 1, y0, 2, y1 - y0);
+  ctx.fillRect(screenX + (spriteW >> 1) - 1, y0, 2, y1 - y0);
+
+  // Dark pool at his feet — projects onto the floor plane
+  var floorY = horizon + Math.round((CANVAS_H >> 1) / Math.max(dist, 0.5));
+  if (floorY > 0 && floorY < CANVAS_H) {
+    var poolW = Math.max(3, Math.round(spriteW * 0.9 * (1 + 0.2 * breathe)));
+    var poolH = Math.max(1, Math.round(poolW * 0.18));
+    ctx.globalAlpha = (0.28 + 0.12 * breathe) * baseFade;
+    ctx.fillStyle = '#1a0000';
+    _fillEllipse(ctx, screenX, floorY, poolW, poolH);
+  }
+
+  ctx.globalAlpha = 1.0;
 }
 
 function _drawProgramColumn(ctx, col, y0, y1, texX, fog, dist) {
@@ -220,13 +268,17 @@ function _drawGMColumn(ctx, col, y0, y1, texX, fog, dist, frame) {
   var tex = frame && SPRITE_TEXTURES[frame];
   if (tex) {
     var srcX = Math.floor(texX * tex.w);
+    // Slow spectral flicker — each column slightly out of phase for a shimmer edge
+    var phase = Date.now() * 0.00088 + col * 0.031;
+    var spectral = 0.78 + 0.22 * Math.sin(phase);
+    ctx.globalAlpha = spectral;
     ctx.drawImage(tex.canvas, srcX, 0, 1, tex.h, col, y0, 1, y1 - y0);
     if (fog > 0.02) {
-      ctx.globalAlpha = fog * 0.6; // GM stays visible in fog longer than walls
+      ctx.globalAlpha = fog * 0.6 * spectral; // GM stays visible in fog longer than walls
       ctx.fillStyle = '#000';
       ctx.fillRect(col, y0, 1, y1 - y0);
-      ctx.globalAlpha = 1.0;
     }
+    ctx.globalAlpha = 1.0;
     return;
   }
 
