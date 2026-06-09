@@ -1,5 +1,5 @@
 // overworld.js — first-person night-time overworld, vaguely Longmont, Colorado.
-// Main Street runs north–south. The Dickens Opera House faces the Hotel Imperial
+// Main Street runs north–south. The Opera House faces the Hotel Imperial
 // across Main; the Sugar Mill sits in a fenced yard to the south-east.
 // The Games Master stalks the streets: he appears at a distance, watches,
 // and vanishes when approached or stared at. He cannot catch you out here.

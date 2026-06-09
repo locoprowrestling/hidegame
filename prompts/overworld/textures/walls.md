@@ -12,11 +12,11 @@
 
 ---
 
-## wall_opera_facade — Dickens Opera House Exterior (Type 17)
+## wall_opera_facade — The Opera House Exterior (Type 17)
 
 > **64 × 64 px. PNG. No alpha.**
 
-**Used:** The exterior face of the Dickens Opera House — the wall the player sees when
+**Used:** The exterior face of the Opera House — the wall the player sees when
 approaching the building from Main Street.
 
 Rusticated sandstone ashlar — the formal 1870s Opera House facade. Smooth-dressed

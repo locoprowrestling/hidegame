@@ -66,7 +66,7 @@ No warmth. No safety. This is the calm between the horror.
 
 | Type | Character      | Map char | Used for                    |
 |------|----------------|----------|-----------------------------|
-| 17   | Opera facade   | O        | Dickens Opera House exterior |
+| 17   | Opera facade   | O        | Opera House exterior         |
 | 18   | Mill facade    | M        | Great Western Sugar Mill    |
 | 19   | Hotel facade   | H        | Hotel Imperial exterior     |
 | 20   | Hedge/tree     | T        | Town boundary, border       |

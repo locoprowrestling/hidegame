@@ -58,7 +58,7 @@ var WALL_GILT      = 14;  // gilded trim — penthouse / grand spaces
 var WALL_CELLAR    = 15;  // service stone — attic / back-of-house
 
 // Wall type IDs — Overworld (Longmont streets at night)
-var WALL_FACADE_OPERA = 17;  // Dickens Opera House front
+var WALL_FACADE_OPERA = 17;  // Opera House front
 var WALL_FACADE_MILL  = 18;  // Sugar Mill sheet metal
 var WALL_FACADE_HOTEL = 19;  // Hotel Imperial brick front
 var WALL_HEDGE        = 20;  // trees / hedges

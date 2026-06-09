@@ -8,7 +8,7 @@ unlocked in order:
 
 | Stage | Building            | Floors | Collectibles (per floor × floors)  | Exit                |
 |-------|---------------------|--------|------------------------------------|---------------------|
-| I     | Dickens Opera House | 4      | 28 programs (7 × 4)                | Front doors, F0     |
+| I     | The Opera House     | 4      | 28 programs (7 × 4)                | Front doors, F0     |
 | II    | The Sugar Mill      | 8      | 40 punch cards (5 × 8)             | Roof hatch, F7      |
 | III   | Hotel Imperial      | 10     | 40 room keys (4 × 10)              | Master Suite, F9    |
 
