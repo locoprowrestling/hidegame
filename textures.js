@@ -5,7 +5,7 @@ var CEIL_TEXTURES   = {};  // keyed by floor index 0-3
 var SPRITE_TEXTURES = {};  // keyed by name; stored as {canvas, w, h} for drawImage
 
 var _texLoadCount = 0;
-var _texLoadTotal = 68;  // 5 R1 + 5 R2 + 5 R3 + 4 OW walls + (4+8+10) floors + (4+8+10) ceilings + sprites
+var _texLoadTotal = 69;  // 5 R1 + 5 R2 + 5 R3 + 4 OW walls + (4+8+10) floors + (4+8+10) ceilings + sprites + OW ground
 
 function _loadTex(src, cb) {
   var img = new Image();
@@ -106,6 +106,7 @@ function loadTextures() {
   _loadTex('assets/overworld/textures/wall_mill_facade.png',   function(t) { WALL_TEXTURES[18] = t; });
   _loadTex('assets/overworld/textures/wall_hotel_facade.png',  function(t) { WALL_TEXTURES[19] = t; });
   _loadTex('assets/overworld/textures/wall_hedge.png',         function(t) { WALL_TEXTURES[20] = t; });
+  _loadTex('assets/overworld/textures/ground.png',             function(t) { FLOOR_TEXTURES['ow_ground'] = t; });
   // Round 1 floors + ceilings
   _loadTex('assets/textures/floor_foyer.png',        function(t) { FLOOR_TEXTURES[0] = t; });
   _loadTex('assets/textures/floor_auditorium.png',   function(t) { FLOOR_TEXTURES[1] = t; });

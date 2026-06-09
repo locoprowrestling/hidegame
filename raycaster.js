@@ -30,6 +30,8 @@ function castAndDraw(ctx, player, gs) {
     var texOffset = ROUNDS[gs.currentRound].texOffset;
     floorTex = FLOOR_TEXTURES[texOffset + floorIdx];
     ceilTex  = CEIL_TEXTURES[texOffset + floorIdx];
+  } else {
+    floorTex = FLOOR_TEXTURES['ow_ground'] || null;
   }
 
   // Leftmost and rightmost ray directions for floor/ceiling casting

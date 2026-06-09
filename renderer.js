@@ -380,12 +380,14 @@ function _drawFullMap(ctx, gs) {
   ctx.fillStyle = 'rgba(0,0,0,0.86)';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Countdown
+  // Countdown + remaining uses
   var secs = Math.max(0, gs.mapTimeLeft / 1000).toFixed(1);
   ctx.font = '13px "VT323", monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = gs.mapTimeLeft < 1000 ? '#ff4400' : '#806040';
-  ctx.fillText('MAP  ' + secs + 's', CANVAS_W / 2, oy - 3);
+  var usesLeft = (typeof gs.mapUsesLeft === 'number') ? gs.mapUsesLeft : 0;
+  var usesStr  = usesLeft > 0 ? '  [' + usesLeft + ' left]' : '  [none left]';
+  ctx.fillText('MAP  ' + secs + 's' + usesStr, CANVAS_W / 2, oy - 3);
 
   // Map background
   ctx.fillStyle = '#0a0806';

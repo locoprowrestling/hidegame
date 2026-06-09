@@ -9,9 +9,9 @@ var gs = {
   pickupFlash:  0,
   flickerAmt:   0,
   flickerTimer: 0,
-  showMap:          false,
-  mapUsedThisFloor: false,
-  mapTimeLeft:      0,
+  showMap:      false,
+  mapUsesLeft:  3,
+  mapTimeLeft:  0,
   audioReady:       false,
   isOverworld:      false,
   // Stress system
@@ -110,7 +110,7 @@ function enterOverworld(fromBuilding) {
   gs.whisperText  = null; gs.whisperMs = 0;
   gs.fakeGM       = null;
   gs.pickupFlash  = 0; gs.luckyFlash = 0; gs.flickerAmt = 0;
-  gs.showMap = false; gs.mapUsedThisFloor = false; gs.mapTimeLeft = 0;
+  gs.showMap = false; gs.mapUsesLeft = 3; gs.mapTimeLeft = 0;
   // Reappear outside the building you last left
   var ret = OW_RETURN[gs.lastExitedRound];
   if (fromBuilding && ret) {
@@ -145,10 +145,10 @@ function _fullReset() {
   gs.pickupFlash      = 0;
   gs.luckyFlash       = 0;
   gs.flickerAmt       = 0;
-  gs.showMap          = false;
-  gs.mapUsedThisFloor = false;
-  gs.mapTimeLeft      = 0;
-  gs.stress           = 18;
+  gs.showMap     = false;
+  gs.mapUsesLeft = 3;
+  gs.mapTimeLeft = 0;
+  gs.stress      = 18;
   gs.scareTimer       = SCARE_MIN_GAP_MS + Math.random() * (SCARE_MAX_GAP_MS - SCARE_MIN_GAP_MS);
   gs.whisperText      = null;
   gs.whisperMs        = 0;
@@ -296,9 +296,9 @@ function _changeFloor(toFloor) {
   gs.player.x     = s.x;   gs.player.y     = s.y;
   gs.player.dirX  = s.dirX; gs.player.dirY  = s.dirY;
   gs.player.planeX = s.planeX; gs.player.planeY = s.planeY;
-  gs.showMap          = false;
-  gs.mapUsedThisFloor = false;
-  gs.mapTimeLeft      = 0;
+  gs.showMap     = false;
+  gs.mapUsesLeft = 3;
+  gs.mapTimeLeft = 0;
 }
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
@@ -364,10 +364,10 @@ function loop(ts) {
       gs.flickerTimer = 90 + Math.random() * 140;
     }
 
-    if (gs.keys['Tab'] && !gs.mapUsedThisFloor) {
-      gs.mapUsedThisFloor = true;
-      gs.mapTimeLeft = 3000;
+    // Overworld map is unlimited — rearms each time Tab is released
+    if (gs.keys['Tab'] && !gs.showMap) {
       gs.showMap = true;
+      gs.mapTimeLeft = 3000;
     }
     if (gs.showMap) {
       gs.mapTimeLeft -= dt;
@@ -376,8 +376,6 @@ function loop(ts) {
         gs.mapTimeLeft = 0;
       }
     }
-    // Town map is reusable — rearms once Tab is released
-    if (!gs.keys['Tab'] && !gs.showMap) gs.mapUsedThisFloor = false;
 
     castAndDraw(ctx, p, gs);
     drawSprites(ctx, p, gs);
@@ -435,8 +433,8 @@ function loop(ts) {
     return;
   }
 
-  if (gs.keys['Tab'] && !gs.mapUsedThisFloor) {
-    gs.mapUsedThisFloor = true;
+  if (gs.keys['Tab'] && !gs.showMap && gs.mapUsesLeft > 0) {
+    gs.mapUsesLeft--;
     gs.mapTimeLeft = 3000;
     gs.showMap = true;
   }
