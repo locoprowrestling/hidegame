@@ -1,0 +1,477 @@
+// map_r3.js — Round 3: The Hotel Imperial (10 floors)
+// Loaded after map.js. Uses parseMapStrings + pushes ROUNDS[2].
+// Chars: W=wallpaper(11) D=mahogany(12) T=tile(13) G=gilt(14) S=cellar stone(15) B=wood(5)
+// Stairs convention: west (2,10) down, east (27,10) up. Row 10 open at both.
+
+var _R3CH = { 'W': 11, 'D': 12, 'T': 13, 'G': 14, 'S': 15, 'B': 5 };
+
+// ── F0 — The Lobby ────────────────────────────────────────────────────────────
+var _H0 = parseMapStrings([
+  'DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
+  'D............................D',
+  'D..G......G........G......G..D',
+  'D............................D',
+  'D............................D',
+  'D............................D',
+  'D............................D',
+  'D..........DDDDDDDD..........D',
+  'D..........DDDDDDDD..........D',
+  'D............................D',
+  'D............................D',
+  'D............................D',
+  'D..G......G........G......G..D',
+  'D............................D',
+  'D...DDDD..............DDDD...D',
+  'D...D....................D...D',
+  'D...D....................D...D',
+  'D............................D',
+  'D............................D',
+  'DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
+], _R3CH);
+
+// ── F1 — Grand Ballroom ───────────────────────────────────────────────────────
+var _H1 = parseMapStrings([
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'G............................G',
+  'GGGGGGGG..GGGGGGGGGG..GGGGGGGG',
+  'G............................G',
+  'G............................G',
+  'G............................G',
+  'G.....G.....G.....G.....G....G',
+  'G............................G',
+  'G............................G',
+  'G.....G.....G.....G.....G....G',
+  'G............................G',
+  'G............................G',
+  'G.....G.....G.....G.....G....G',
+  'G............................G',
+  'G............................G',
+  'G.....G.....G.....G.....G....G',
+  'G............................G',
+  'G............................G',
+  'G............................G',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+], _R3CH);
+
+// ── F2 — Kitchen & Dining ─────────────────────────────────────────────────────
+var _H2 = parseMapStrings([
+  'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+  'T............................T',
+  'T..DD...DD...DD..T..TTTTTTT..T',
+  'T..DD...DD...DD..T...........T',
+  'T................T..TTTTTTT..T',
+  'T..DD...DD...DD..T...........T',
+  'T..DD...DD...DD..T..TTTTTTT..T',
+  'T................T...........T',
+  'T..DD...DD...DD..T...........T',
+  'T..DD...DD...DD..............T',
+  'T............................T',
+  'T............................T',
+  'T..DD...DD...DD..T...........T',
+  'T..DD...DD...DD..T..SSSSSSS..T',
+  'T................T...........T',
+  'T..DD...DD...DD..T..SSSSSSS..T',
+  'T..DD...DD...DD..T...........T',
+  'T................T..SSSSSSS..T',
+  'T............................T',
+  'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+], _R3CH);
+
+// ── F3 — Guest Floor II — central corridor ────────────────────────────────────
+var _H3 = parseMapStrings([
+  'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
+  'W....W......W.......W........W',
+  'W....W......W.......W........W',
+  'W....W......W.......W........W',
+  'W....W......W.......W........W',
+  'W....W......W.......W........W',
+  'W....W......W.......W........W',
+  'W....W......W.......W........W',
+  'WW.WWWWW.WWWWWW.WWWWWWW.WWWWWW',
+  'W............................W',
+  'W............................W',
+  'W............................W',
+  'WWWW.WWWWWW.WWWWWWWW.WWWW.WWWW',
+  'W......W..........W..........W',
+  'W......W..........W..........W',
+  'W......W..........W..........W',
+  'W......W..........W..........W',
+  'W......W..........W..........W',
+  'W......W..........W..........W',
+  'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
+], _R3CH);
+
+// ── F4 — Guest Floor III — ring corridor + inner block ────────────────────────
+var _H4 = parseMapStrings([
+  'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
+  'W............................W',
+  'W............................W',
+  'W..WWWW.WWWWWWW.WWWWWWW.WWW..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..WWWWWWWW.WWWWWWWW.WWWWWW..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..WW.WWWWWWWWWWW.WWWWWWWWW..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..W......................W..W',
+  'W..WWWW.WWWWWWW.WWWWWWW.WWW..W',
+  'W............................W',
+  'W............................W',
+  'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
+], _R3CH);
+
+// ── F5 — Guest Floor IV — cross corridors + quadrant suites ───────────────────
+var _H5 = parseMapStrings([
+  'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
+  'W...........W......W.........W',
+  'W...........W......W.........W',
+  'W...........W......W.........W',
+  'W.....WWWW..W......W..WWWW...W',
+  'W...........W......W.........W',
+  'W...........W......W.........W',
+  'W...........W......W.........W',
+  'WWWW.WWWWWWWW......WWWWWW.WWWW',
+  'W............................W',
+  'W............................W',
+  'W............................W',
+  'WWWWWWW.WWWWW......WWWW.WWWWWW',
+  'W...........W......W.........W',
+  'W.....W.....W......W.....W...W',
+  'W.....W.....W......W.....W...W',
+  'W.....W.....W......W.....W...W',
+  'W...........W......W.........W',
+  'W............................W',
+  'WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW',
+], _R3CH);
+
+// ── F6 — Honeymoon Suites ─────────────────────────────────────────────────────
+var _H6 = parseMapStrings([
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'G............W..W............G',
+  'G............W..W............G',
+  'G............W..W............G',
+  'G...WWWWW....W..W....WWWWW...G',
+  'G............W..W............G',
+  'G............W..W............G',
+  'G............W..W............G',
+  'GWWWWWW.WWWWWW..WWWWWW.WWWWWWG',
+  'G............................G',
+  'G............................G',
+  'G............................G',
+  'GWWWWWW.WWWWWW..WWWWWW.WWWWWWG',
+  'G............W..W............G',
+  'G............W..W............G',
+  'G...WWWWW....W..W....WWWWW...G',
+  'G............W..W............G',
+  'G............W..W............G',
+  'G............W..W............G',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+], _R3CH);
+
+// ── F7 — Maids' Quarters ──────────────────────────────────────────────────────
+var _H7 = parseMapStrings([
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+  'S............................S',
+  'S............................S',
+  'S...S....S....S....S....S....S',
+  'S...S....S....S....S....S....S',
+  'SSSSS....SSSSSS....SSSSSS....S',
+  'S...S....S....S....S....S....S',
+  'S...S....S....S....S....S....S',
+  'S...S....S....S....S....S....S',
+  'S............................S',
+  'S............................S',
+  'S............................S',
+  'S.....S....S....S....S....S..S',
+  'S.....S....S....S....S....S..S',
+  'S.....SSSSSS....SSSSSS....S..S',
+  'S.....S....S....S....S....S..S',
+  'S.....S....S....S....S....S..S',
+  'S............................S',
+  'S............................S',
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+], _R3CH);
+
+// ── F8 — Service Attic ────────────────────────────────────────────────────────
+var _H8 = parseMapStrings([
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+  'S............................S',
+  'S..BB....BB......BB....BB....S',
+  'S..BB....BB......BB....BB....S',
+  'S............................S',
+  'S......BB....BB......BB......S',
+  'S......BB....BB......BB......S',
+  'S............................S',
+  'S..BB....BB......BB....BB....S',
+  'S............................S',
+  'S............................S',
+  'S............................S',
+  'S....BB....BB....BB....BB....S',
+  'S....BB....BB....BB....BB....S',
+  'S............................S',
+  'S..BB....BB....BB......BB....S',
+  'S..BB....BB....BB......BB....S',
+  'S............................S',
+  'S............................S',
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSSSS',
+], _R3CH);
+
+// ── F9 — The Penthouse ────────────────────────────────────────────────────────
+var _H9 = parseMapStrings([
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+  'G..........G........G........G',
+  'G..........G........G........G',
+  'G..........G........G........G',
+  'G..........GGGG..GGGG........G',
+  'G............................G',
+  'G...DDDD............DDDD.....G',
+  'G............................G',
+  'G............................G',
+  'G............................G',
+  'G............................G',
+  'G............................G',
+  'G...DDDD............DDDD.....G',
+  'G............................G',
+  'G..........DDDDDDDD..........G',
+  'G..........D......D..........G',
+  'G..........D......D..........G',
+  'G............................G',
+  'G............................G',
+  'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+], _R3CH);
+
+// ── Round 3 floor definitions ─────────────────────────────────────────────────
+var FLOORS_R3 = [
+  {
+    id: 0, name: 'The Lobby',
+    map: _H0,
+    programs: [
+      { x: 14.5, y:  9.5, label: 'Key — Front Desk'       },
+      { x:  5.5, y:  2.5, label: 'Key — Cloakroom'        },
+      { x: 24.5, y:  5.5, label: "Key — Manager's Office" },
+      { x:  8.5, y: 16.5, label: 'Key — Cigar Lounge'     },
+    ],
+    gmStart:  { x: 14.5, y:  4.5 },
+    gmPatrol: [
+      { x: 14.5, y:  2.5 }, { x:  4.5, y:  4.5 }, { x:  4.5, y: 10.5 },
+      { x: 14.5, y: 11.5 }, { x: 24.5, y: 10.5 }, { x: 24.5, y:  4.5 },
+      { x: 14.5, y:  5.5 }, { x:  8.5, y: 16.5 }, { x: 14.5, y: 17.5 },
+      { x: 21.5, y: 17.5 },
+    ],
+    playerStart: { x: 14.5, y: 17.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x: 27.5, y: 10.5, toFloor: 1, label: 'Stairs — Grand Ballroom ↑' },
+    ],
+  },
+  {
+    id: 1, name: 'Grand Ballroom',
+    map: _H1,
+    programs: [
+      { x: 14.5, y:  1.5, label: 'Key — Bandstand'       },
+      { x:  3.5, y:  7.5, label: 'Key — Ballroom West'   },
+      { x: 26.5, y: 13.5, label: 'Key — Ballroom East'   },
+      { x: 14.5, y: 17.5, label: 'Key — Champagne Store' },
+    ],
+    gmStart:  { x: 14.5, y: 10.5 },
+    gmPatrol: [
+      { x: 14.5, y:  4.5 }, { x:  3.5, y:  7.5 }, { x:  9.5, y: 10.5 },
+      { x: 14.5, y: 13.5 }, { x: 20.5, y: 10.5 }, { x: 26.5, y: 13.5 },
+      { x: 14.5, y: 17.5 }, { x:  3.5, y: 16.5 }, { x: 26.5, y:  4.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 0, label: 'Stairs — Lobby ↓'            },
+      { x: 27.5, y: 10.5, toFloor: 2, label: 'Stairs — Kitchen & Dining ↑' },
+    ],
+  },
+  {
+    id: 2, name: 'Kitchen & Dining',
+    map: _H2,
+    programs: [
+      { x: 15.5, y:  3.5, label: 'Key — Dining Hall' },
+      { x: 23.5, y:  3.5, label: 'Key — Pantry'      },
+      { x: 23.5, y: 14.5, label: 'Key — Cold Store'  },
+      { x:  1.5, y: 18.5, label: 'Key — Dumbwaiter'  },
+    ],
+    gmStart:  { x: 15.5, y: 10.5 },
+    gmPatrol: [
+      { x: 15.5, y:  1.5 }, { x:  5.5, y:  7.5 }, { x: 15.5, y:  7.5 },
+      { x: 23.5, y:  5.5 }, { x: 27.5, y:  3.5 }, { x:  5.5, y: 14.5 },
+      { x: 15.5, y: 18.5 }, { x: 23.5, y: 16.5 }, { x: 15.5, y: 10.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 1, label: 'Stairs — Grand Ballroom ↓' },
+      { x: 27.5, y: 10.5, toFloor: 3, label: 'Stairs — Guest Floor II ↑' },
+    ],
+  },
+  {
+    id: 3, name: 'Guest Floor II',
+    map: _H3,
+    programs: [
+      { x:  2.5, y:  2.5, label: 'Key — Room 201' },
+      { x: 16.5, y:  4.5, label: 'Key — Room 202' },
+      { x: 12.5, y: 16.5, label: 'Key — Room 203' },
+      { x: 24.5, y: 15.5, label: 'Key — Room 204' },
+    ],
+    gmStart:  { x: 14.5, y: 10.5 },
+    gmPatrol: [
+      { x:  3.5, y: 10.5 }, { x:  2.5, y:  2.5 }, { x:  8.5, y:  4.5 },
+      { x: 15.5, y: 10.5 }, { x: 23.5, y:  3.5 }, { x: 26.5, y: 10.5 },
+      { x: 24.5, y: 15.5 }, { x: 12.5, y: 16.5 }, { x:  4.5, y: 15.5 },
+      { x: 15.5, y: 10.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 2, label: 'Stairs — Kitchen & Dining ↓' },
+      { x: 27.5, y: 10.5, toFloor: 4, label: 'Stairs — Guest Floor III ↑'  },
+    ],
+  },
+  {
+    id: 4, name: 'Guest Floor III',
+    map: _H4,
+    programs: [
+      { x:  1.5, y:  1.5, label: 'Key — Room 301' },
+      { x: 14.5, y:  5.5, label: 'Key — Room 302' },
+      { x: 24.5, y: 10.5, label: 'Key — Room 303' },
+      { x:  8.5, y: 14.5, label: 'Key — Room 304' },
+    ],
+    gmStart:  { x: 14.5, y:  1.5 },
+    gmPatrol: [
+      { x: 14.5, y:  1.5 }, { x: 27.5, y:  5.5 }, { x: 27.5, y: 14.5 },
+      { x: 14.5, y: 17.5 }, { x:  1.5, y: 14.5 }, { x:  1.5, y:  5.5 },
+      { x: 14.5, y: 10.5 }, { x: 14.5, y:  5.5 }, { x:  8.5, y: 14.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 3, label: 'Stairs — Guest Floor II ↓' },
+      { x: 27.5, y: 10.5, toFloor: 5, label: 'Stairs — Guest Floor IV ↑' },
+    ],
+  },
+  {
+    id: 5, name: 'Guest Floor IV',
+    map: _H5,
+    programs: [
+      { x:  3.5, y:  3.5, label: 'Key — Room 401' },
+      { x: 26.5, y:  2.5, label: 'Key — Room 402' },
+      { x:  3.5, y: 16.5, label: 'Key — Room 403' },
+      { x: 22.5, y: 15.5, label: 'Key — Room 404' },
+    ],
+    gmStart:  { x: 15.5, y:  2.5 },
+    gmPatrol: [
+      { x: 15.5, y:  2.5 }, { x:  3.5, y:  4.5 }, { x:  9.5, y: 10.5 },
+      { x: 15.5, y: 10.5 }, { x: 24.5, y:  3.5 }, { x: 26.5, y: 10.5 },
+      { x: 22.5, y: 15.5 }, { x: 15.5, y: 17.5 }, { x:  4.5, y: 15.5 },
+      { x: 15.5, y: 10.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 4, label: 'Stairs — Guest Floor III ↓'   },
+      { x: 27.5, y: 10.5, toFloor: 6, label: 'Stairs — Honeymoon Suites ↑'  },
+    ],
+  },
+  {
+    id: 6, name: 'Honeymoon Suites',
+    map: _H6,
+    programs: [
+      { x:  2.5, y:  2.5, label: 'Key — Bridal Suite' },
+      { x: 27.5, y:  5.5, label: 'Key — Garden Suite' },
+      { x:  5.5, y: 17.5, label: 'Key — Velvet Suite' },
+      { x: 24.5, y: 13.5, label: 'Key — Corner Suite' },
+    ],
+    gmStart:  { x: 14.5, y: 10.5 },
+    gmPatrol: [
+      { x: 14.5, y:  2.5 }, { x:  6.5, y:  5.5 }, { x:  3.5, y: 10.5 },
+      { x:  6.5, y: 13.5 }, { x: 14.5, y: 17.5 }, { x: 23.5, y: 14.5 },
+      { x: 26.5, y: 10.5 }, { x: 23.5, y:  5.5 }, { x: 14.5, y: 10.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 5, label: 'Stairs — Guest Floor IV ↓'  },
+      { x: 27.5, y: 10.5, toFloor: 7, label: "Stairs — Maids' Quarters ↑" },
+    ],
+  },
+  {
+    id: 7, name: "Maids' Quarters",
+    map: _H7,
+    programs: [
+      { x:  2.5, y:  3.5, label: "Key — Servants' Hall" },
+      { x: 16.5, y:  7.5, label: 'Key — Linen Store'    },
+      { x: 13.5, y: 15.5, label: "Key — Maid's Cell 9"  },
+      { x: 27.5, y: 13.5, label: 'Key — Back Stair'     },
+    ],
+    gmStart:  { x: 14.5, y: 10.5 },
+    gmPatrol: [
+      { x: 14.5, y:  1.5 }, { x:  2.5, y:  7.5 }, { x:  7.5, y:  7.5 },
+      { x: 14.5, y: 10.5 }, { x: 22.5, y:  3.5 }, { x: 26.5, y: 10.5 },
+      { x: 13.5, y: 15.5 }, { x:  3.5, y: 17.5 }, { x: 18.5, y: 13.5 },
+      { x: 14.5, y: 10.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 6, label: 'Stairs — Honeymoon Suites ↓' },
+      { x: 27.5, y: 10.5, toFloor: 8, label: 'Stairs — Service Attic ↑'    },
+    ],
+  },
+  {
+    id: 8, name: 'Service Attic',
+    map: _H8,
+    programs: [
+      { x: 14.5, y:  2.5, label: 'Key — Luggage Cage' },
+      { x: 27.5, y:  5.5, label: 'Key — Boiler Hatch' },
+      { x:  2.5, y: 13.5, label: 'Key — Storage Loft' },
+      { x: 20.5, y: 16.5, label: 'Key — Dovecote'     },
+    ],
+    gmStart:  { x: 14.5, y: 10.5 },
+    gmPatrol: [
+      { x:  4.5, y:  1.5 }, { x: 14.5, y:  4.5 }, { x: 25.5, y:  2.5 },
+      { x: 27.5, y:  9.5 }, { x: 14.5, y: 10.5 }, { x:  2.5, y: 10.5 },
+      { x:  7.5, y: 14.5 }, { x: 14.5, y: 17.5 }, { x: 25.5, y: 14.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 7, label: "Stairs — Maids' Quarters ↓" },
+      { x: 27.5, y: 10.5, toFloor: 9, label: 'Stairs — The Penthouse ↑'   },
+    ],
+  },
+  {
+    id: 9, name: 'The Penthouse',
+    map: _H9,
+    programs: [
+      { x:  2.5, y:  2.5, label: 'Key — Master Suite' },
+      { x: 24.5, y:  2.5, label: 'Key — Private Bath' },
+      { x: 14.5, y: 15.5, label: 'Key — Wine Cabinet' },
+      { x:  2.5, y: 17.5, label: 'Key — Balcony Door' },
+    ],
+    gmStart:  { x: 14.5, y: 10.5 },
+    gmPatrol: [
+      { x:  5.5, y:  5.5 }, { x: 15.5, y:  5.5 }, { x: 24.5, y:  5.5 },
+      { x: 27.5, y: 10.5 }, { x: 20.5, y:  9.5 }, { x: 14.5, y: 17.5 },
+      { x:  5.5, y: 13.5 }, { x:  2.5, y: 10.5 }, { x: 10.5, y:  9.5 },
+    ],
+    playerStart: { x: 27.5, y: 10.5, dirX: 0, dirY: -1, planeX: 0.66, planeY: 0 },
+    exits: [
+      { x:  2.5, y: 10.5, toFloor: 8, label: 'Stairs — Service Attic ↓' },
+    ],
+  },
+];
+
+ROUNDS.push({
+  id: 2,
+  name:             'Stage III: The Hotel Imperial',
+  roundLabel:       'THE HOTEL IMPERIAL',
+  floors:           FLOORS_R3,
+  programsPerFloor: 4,
+  texOffset:        12,  // no textures yet — flat-colour fallback
+  exitFloor:        9,
+  exitPos:          { x: 15.5, y: 2.5 },
+  exitLabel:        'ALL KEYS FOUND  —  ENTER THE MASTER SUITE',
+  winTitle:         'CHECKOUT',
+  winBody:          '40 keys. 10 floors. The Imperial lets you leave.',
+  completionKey:    'gm_r3_complete',
+});

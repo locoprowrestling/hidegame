@@ -20,8 +20,17 @@ function castAndDraw(ctx, player, gs) {
   var horizon = halfH + Math.round(bobOffset);
 
   var floorIdx = gs.currentFloor;
-  var floorTex = FLOOR_TEXTURES[floorIdx];
-  var ceilTex  = CEIL_TEXTURES[floorIdx];
+  var outdoor  = !!gs.isOverworld;
+  var fogDist  = outdoor ? OW_FOG_DIST : FOG_DIST;
+  var maxDepth = outdoor ? OW_MAX_RAY_DEPTH : MAX_RAY_DEPTH;
+  var ceilBase  = outdoor ? OW_SKY_COLOR    : CEILING_COLOR;
+  var floorBase = outdoor ? OW_GROUND_COLOR : FLOOR_COLOR;
+  var floorTex = null, ceilTex = null;
+  if (!outdoor) {
+    var texOffset = ROUNDS[gs.currentRound].texOffset;
+    floorTex = FLOOR_TEXTURES[texOffset + floorIdx];
+    ceilTex  = CEIL_TEXTURES[texOffset + floorIdx];
+  }
 
   // Leftmost and rightmost ray directions for floor/ceiling casting
   var rayDirX0 = player.dirX - player.planeX;
@@ -46,7 +55,7 @@ function castAndDraw(ctx, player, gs) {
 
     if (tex) {
       var rowDist = halfH / dy;
-      var fog = Math.min(rowDist / FOG_DIST, 1.0);
+      var fog = Math.min(rowDist / fogDist, 1.0);
       fog = fog * fog;
       var ff = (1 - fog) * (isCeiling ? 0.62 : 1.0);
 
@@ -69,7 +78,7 @@ function castAndDraw(ctx, player, gs) {
       }
     } else {
       // Flat color fallback
-      var base = isCeiling ? CEILING_COLOR : FLOOR_COLOR;
+      var base = isCeiling ? ceilBase : floorBase;
       var t = Math.min((dy / (isCeiling ? horizon : (CANVAS_H - horizon))) * 1.4, 1.0);
       var fr = Math.round(base[0] * (1 - t) + base[0] * 0.3 * t);
       var fg = Math.round(base[1] * (1 - t) + base[1] * 0.3 * t);
@@ -113,7 +122,7 @@ function castAndDraw(ctx, player, gs) {
     var hit = 0, side = 0, wallType = 0;
     var depth = 0;
 
-    while (!hit && depth < MAX_RAY_DEPTH) {
+    while (!hit && depth < maxDepth) {
       if (sideDistX < sideDistY) {
         sideDistX += deltaDistX;
         mapCol += stepCol;
@@ -140,7 +149,7 @@ function castAndDraw(ctx, player, gs) {
     var drawStart = Math.max(0, horizon - (lineH >> 1));
     var drawEnd   = Math.min(CANVAS_H - 1, horizon + (lineH >> 1));
 
-    var wfog = Math.min(perpDist / FOG_DIST, 1.0);
+    var wfog = Math.min(perpDist / fogDist, 1.0);
     wfog = wfog * wfog;
     var fogFactor = 1 - wfog;
     var sideFactor = side === 1 ? 0.65 : 1.0;
@@ -174,8 +183,9 @@ function castAndDraw(ctx, player, gs) {
         var wb = (wallTex.data[wtIdx+2] * combined) | 0;
 
         if (gs && gs.flickerAmt) {
-          wr = Math.min(255, wr + gs.flickerAmt | 0);
-          wg = Math.min(255, wg + gs.flickerAmt * 0.8 | 0);
+          wr = Math.max(0, Math.min(255, wr + gs.flickerAmt | 0));
+          wg = Math.max(0, Math.min(255, wg + gs.flickerAmt * 0.8 | 0));
+          wb = Math.max(0, Math.min(255, wb + gs.flickerAmt * 0.6 | 0));
         }
 
         var widx = (row * CANVAS_W + col) * 4;
@@ -192,8 +202,9 @@ function castAndDraw(ctx, player, gs) {
       var wb = (wc[2] * sideFactor * fogFactor) | 0;
 
       if (gs && gs.flickerAmt) {
-        wr = Math.min(255, wr + gs.flickerAmt | 0);
-        wg = Math.min(255, wg + gs.flickerAmt * 0.8 | 0);
+        wr = Math.max(0, Math.min(255, wr + gs.flickerAmt | 0));
+        wg = Math.max(0, Math.min(255, wg + gs.flickerAmt * 0.8 | 0));
+        wb = Math.max(0, Math.min(255, wb + gs.flickerAmt * 0.6 | 0));
       }
 
       for (var wrow = drawStart; wrow <= drawEnd; wrow++) {

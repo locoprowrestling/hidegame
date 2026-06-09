@@ -1,5 +1,30 @@
 // All non-raycasting draw calls: HUD, screens, vignette
 
+// ── Round select screen ───────────────────────────────────────────────────────
+function drawRoundSelect(ctx) {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  ctx.fillStyle = '#c0a060';
+  ctx.font = 'bold 14px "Press Start 2P", serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('SELECT ROUND', CANVAS_W / 2, 30);
+
+  var r1done = r1Complete();
+  var r2done = r2Complete();
+
+  ctx.font = '14px "VT323", monospace';
+  ctx.fillStyle = r1done ? '#888' : '#c0a060';
+  ctx.fillText('[1]  Round I: The Opera House' + (r1done ? '  ✓' : ''), CANVAS_W / 2, 70);
+
+  ctx.fillStyle = '#c0a060';
+  ctx.fillText('[2]  Round II: The Sugar Works' + (r2done ? '  ✓' : ''), CANVAS_W / 2, 92);
+
+  ctx.fillStyle = '#555';
+  ctx.font = '12px "VT323", monospace';
+  ctx.fillText('Press 1 or 2', CANVAS_W / 2, 120);
+}
+
 // ── Title screen ─────────────────────────────────────────────────────────────
 function drawTitle(ctx) {
   var bg = SPRITE_TEXTURES['screen-title'];
@@ -27,8 +52,8 @@ function drawTitle(ctx) {
 
   ctx.fillStyle = '#8a7050';
   ctx.font = '14px "VT323", monospace';
-  ctx.fillText('Collect 7 programs on each of the 4 floors.', CANVAS_W / 2, 152);
-  ctx.fillText('Avoid The Games Master. Escape through the front doors.', CANVAS_W / 2, 165);
+  ctx.fillText('Three buildings. One town. He is in all of them.', CANVAS_W / 2, 152);
+  ctx.fillText('The Opera House · The Sugar Mill · The Hotel Imperial', CANVAS_W / 2, 165);
 
   ctx.fillStyle = '#555548';
   ctx.font = '13px "VT323", monospace';
@@ -76,8 +101,12 @@ function drawGameOver(ctx) {
 }
 
 // ── Win screen ────────────────────────────────────────────────────────────────
-function drawWin(ctx) {
-  var bg = SPRITE_TEXTURES['screen-win'];
+function drawWin(ctx, gs) {
+  var roundIdx = (gs && gs.currentRound) || 0;
+  var rd = ROUNDS[roundIdx];
+
+  var bgKey = roundIdx >= 1 ? 'screen-win-r2' : 'screen-win';
+  var bg = SPRITE_TEXTURES[bgKey] || SPRITE_TEXTURES['screen-win'];
   if (bg) {
     ctx.drawImage(bg.canvas, 0, 0, CANVAS_W, CANVAS_H);
   } else {
@@ -85,7 +114,6 @@ function drawWin(ctx) {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }
 
-  // Dark bands for text legibility
   var grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
   grad.addColorStop(0,   'rgba(0,0,0,0.78)');
   grad.addColorStop(0.3, 'rgba(0,0,0,0.0)');
@@ -97,17 +125,28 @@ function drawWin(ctx) {
   ctx.fillStyle = '#c0a060';
   ctx.font = 'bold 14px "Press Start 2P", serif';
   ctx.textAlign = 'center';
-  ctx.fillText('CURTAIN CALL', CANVAS_W / 2, 26);
+  ctx.fillText(rd.winTitle, CANVAS_W / 2, 26);
 
   ctx.fillStyle = '#8a7040';
   ctx.font = '15px "VT323", monospace';
-  ctx.fillText('All 28 programs. All 4 floors. You escaped.', CANVAS_W / 2, 44);
+  ctx.fillText(rd.winBody, CANVAS_W / 2, 44);
+
+  // Tease the next stage
+  if (roundIdx === 0) {
+    ctx.fillStyle = '#6a8060';
+    ctx.font = '13px "VT323", monospace';
+    ctx.fillText('The chains on the Sugar Mill have fallen.', CANVAS_W / 2, 60);
+  } else if (roundIdx === 1) {
+    ctx.fillStyle = '#6a8060';
+    ctx.font = '13px "VT323", monospace';
+    ctx.fillText('The Hotel Imperial is taking guests.', CANVAS_W / 2, 60);
+  }
 
   var blink = Math.floor(Date.now() / 600) % 2 === 0;
   if (blink) {
     ctx.fillStyle = '#c0a060';
     ctx.font = '14px "VT323", monospace';
-    ctx.fillText('PRESS R TO PLAY AGAIN', CANVAS_W / 2, 193);
+    ctx.fillText('PRESS R TO RETURN TO TOWN', CANVAS_W / 2, 193);
   }
 }
 
@@ -128,7 +167,7 @@ function drawHUD(ctx, gs) {
   ctx.fillText(FLOORS[floorIdx].name.toUpperCase(), 4, 14);
 
   // Per-floor program pips — center
-  var pipTotal = PROGRAMS_PER_FLOOR;
+  var pipTotal = ROUNDS[gs.currentRound].programsPerFloor;
   var pipW = pipTotal * 9 - 2;
   var pipStartX = Math.round((CANVAS_W - pipW) / 2);
   for (var j = 0; j < pipTotal; j++) {
@@ -141,6 +180,27 @@ function drawHUD(ctx, gs) {
   ctx.font = '10px "VT323", monospace';
   ctx.textAlign = 'right';
   ctx.fillText(allDone + '/' + totalPrograms(), CANVAS_W - 4, 14);
+
+  // Stress bar — thin strip under the top bar
+  var sFrac = gs.stress / STRESS_MAX;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 20, CANVAS_W, 3);
+  if (sFrac > 0.01) {
+    var sr = Math.round(90 + 165 * sFrac);
+    var sg = Math.round(70 * (1 - sFrac));
+    var flashHi = gs.stress >= STRESS_HUNT_THRESHOLD && Math.floor(Date.now() / 240) % 2 === 0;
+    ctx.fillStyle = flashHi ? '#ff3300' : 'rgb(' + sr + ',' + sg + ',' + sg + ')';
+    ctx.fillRect(0, 20, Math.round(CANVAS_W * sFrac), 3);
+  }
+  if (gs.stress >= STRESS_HUNT_THRESHOLD) {
+    var fl2 = Math.floor(Date.now() / 400) % 2 === 0;
+    if (fl2) {
+      ctx.fillStyle = '#cc4444';
+      ctx.font = '10px "VT323", monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('HE FEELS YOUR FEAR', 4, 31);
+    }
+  }
 
   // GM warning — right, second line
   var onSameFloor = gs.gm.floor === floorIdx;
@@ -175,14 +235,14 @@ function drawHUD(ctx, gs) {
       var pulse = Math.floor(Date.now() / 500) % 2 === 0;
       ctx.fillStyle = pulse ? '#88ccff' : '#4488aa';
       ctx.fillText('[Space]  ' + nearExit.label, CANVAS_W / 2, CANVAS_H - 4);
-    } else if (allDone === totalPrograms() && floorIdx === 0) {
+    } else if (allDone === totalPrograms() && floorIdx === ROUNDS[gs.currentRound].exitFloor) {
       var p2 = Math.floor(Date.now() / 500) % 2 === 0;
       ctx.fillStyle = p2 ? '#c0ff80' : '#80c040';
-      ctx.fillText('ALL FOUND  —  REACH THE FRONT DOORS', CANVAS_W / 2, CANVAS_H - 4);
+      ctx.fillText(ROUNDS[gs.currentRound].exitLabel, CANVAS_W / 2, CANVAS_H - 4);
     } else {
-      // quiet hint
+      var ppf = ROUNDS[gs.currentRound].programsPerFloor;
       ctx.fillStyle = '#2a2a2a';
-      ctx.fillText(floorDone + ' / 7 programs on this floor', CANVAS_W / 2, CANVAS_H - 4);
+      ctx.fillText(floorDone + ' / ' + ppf + ' on this floor', CANVAS_W / 2, CANVAS_H - 4);
     }
   }
 }
@@ -206,6 +266,44 @@ function drawVignette(ctx, gs) {
   grad.addColorStop(1, 'rgba(' + r + ',0,0,' + (0.7 * intensity).toFixed(2) + ')');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+}
+
+// ── Stress FX — desaturating edge vignette + pulse at high stress ─────────────
+function drawStressFX(ctx, gs) {
+  var s = gs.stress / STRESS_MAX;
+  if (s < 0.18) return;
+
+  var pulse = 1;
+  if (gs.stress >= STRESS_HEARTBEAT) {
+    var rate = 0.004 + (gs.stress - STRESS_HEARTBEAT) * 0.00009;
+    pulse = 0.85 + 0.15 * Math.abs(Math.sin(Date.now() * rate));
+  }
+
+  var grad = ctx.createRadialGradient(
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * (0.42 - 0.14 * s),
+    CANVAS_W / 2, CANVAS_H / 2, CANVAS_H * 0.92
+  );
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(8,0,4,' + (0.55 * s * pulse).toFixed(2) + ')');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+}
+
+// ── Whisper text ──────────────────────────────────────────────────────────────
+function drawWhisper(ctx, gs) {
+  if (!gs.whisperText || gs.whisperMs <= 0) return;
+  var t = gs.whisperMs / 3000; // 1 → 0
+  var alpha = t > 0.8 ? (1 - t) / 0.2 : Math.min(1, t / 0.6);
+  var drift = (1 - t) * 6;
+
+  ctx.globalAlpha = alpha * 0.85;
+  ctx.font = 'italic 14px "VT323", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#9a8aa0';
+  ctx.fillText(gs.whisperText, CANVAS_W / 2 + Math.sin(Date.now() * 0.002) * 2,
+    CANVAS_H * 0.62 - drift);
+  ctx.globalAlpha = 1.0;
+  ctx.textAlign = 'left';
 }
 
 // ── Pickup flash ──────────────────────────────────────────────────────────────

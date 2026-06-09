@@ -264,6 +264,21 @@ function _gmAnimFrame(gm, player) {
   }
 }
 
+// ── Fake GM — a half-second glimpse of a figure that was never there ──────────
+function drawFakeGM(ctx, player, gs) {
+  if (!gs.fakeGM || gs.fakeGM.ttl <= 0) return;
+  var zBuf = getZBuffer();
+  var halfH = CANVAS_H >> 1;
+  var horizon = halfH + Math.round(Math.sin(player.bobPhase) * 1.5);
+  var d = dist2d(player.x, player.y, gs.fakeGM.x, gs.fakeGM.y);
+  var sp = { type: 'gm', x: gs.fakeGM.x, y: gs.fakeGM.y, dist: d, frame: 'gm-idle' };
+  // Flickers in and out as it fades
+  var a = Math.min(1, gs.fakeGM.ttl / 200) * (Math.floor(Date.now() / 50) % 3 === 0 ? 0.4 : 0.85);
+  ctx.globalAlpha = a;
+  _drawSprite(ctx, player, sp, zBuf, horizon, gs);
+  ctx.globalAlpha = 1.0;
+}
+
 function _drawGMColumn(ctx, col, y0, y1, texX, fog, dist, frame) {
   var tex = frame && SPRITE_TEXTURES[frame];
   if (tex) {

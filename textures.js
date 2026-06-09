@@ -5,7 +5,7 @@ var CEIL_TEXTURES   = {};  // keyed by floor index 0-3
 var SPRITE_TEXTURES = {};  // keyed by name; stored as {canvas, w, h} for drawImage
 
 var _texLoadCount = 0;
-var _texLoadTotal = 13;
+var _texLoadTotal = 36;  // 5 R1 walls + 5 R2 walls + 4+8 floors + 4+8 ceilings + sprites
 
 function _loadTex(src, cb) {
   var img = new Image();
@@ -83,11 +83,19 @@ function _loadSprite(src, key) {
 }
 
 function loadTextures() {
+  // Round 1 walls
   _loadTex('assets/textures/wall_stone.png',         function(t) { WALL_TEXTURES[1] = t; });
   _loadTex('assets/textures/wall_plaster.png',       function(t) { WALL_TEXTURES[2] = t; });
   _loadTex('assets/textures/wall_curtain.png',       function(t) { WALL_TEXTURES[3] = t; });
   _loadTex('assets/textures/wall_brick.png',         function(t) { WALL_TEXTURES[4] = t; });
   _loadTex('assets/textures/wall_wood.png',          function(t) { WALL_TEXTURES[5] = t; });
+  // Round 2 walls
+  _loadTex('assets/r2/textures/wall_concrete.png',      function(t) { WALL_TEXTURES[6]  = t; });
+  _loadTex('assets/r2/textures/wall_corrugated.png',    function(t) { WALL_TEXTURES[7]  = t; });
+  _loadTex('assets/r2/textures/wall_lime.png',          function(t) { WALL_TEXTURES[8]  = t; });
+  _loadTex('assets/r2/textures/wall_pipemetal.png',     function(t) { WALL_TEXTURES[9]  = t; });
+  _loadTex('assets/r2/textures/wall_sugar.png',         function(t) { WALL_TEXTURES[10] = t; });
+  // Round 1 floors + ceilings
   _loadTex('assets/textures/floor_foyer.png',        function(t) { FLOOR_TEXTURES[0] = t; });
   _loadTex('assets/textures/floor_auditorium.png',   function(t) { FLOOR_TEXTURES[1] = t; });
   _loadTex('assets/textures/floor_gallery.png',      function(t) { FLOOR_TEXTURES[2] = t; });
@@ -96,6 +104,23 @@ function loadTextures() {
   _loadTex('assets/textures/ceiling_auditorium.png', function(t) { CEIL_TEXTURES[1] = t; });
   _loadTex('assets/textures/ceiling_gallery.png',    function(t) { CEIL_TEXTURES[2] = t; });
   _loadTex('assets/textures/ceiling_flies.png',      function(t) { CEIL_TEXTURES[3] = t; });
+  // Round 2 floors + ceilings (indices 4–11 map to R2 floor 0–7)
+  _loadTex('assets/r2/textures/floor_beetyard.png',       function(t) { FLOOR_TEXTURES[4]  = t; });
+  _loadTex('assets/r2/textures/floor_washhouse.png',      function(t) { FLOOR_TEXTURES[5]  = t; });
+  _loadTex('assets/r2/textures/floor_slicefloor.png',     function(t) { FLOOR_TEXTURES[6]  = t; });
+  _loadTex('assets/r2/textures/floor_diffusion.png',      function(t) { FLOOR_TEXTURES[7]  = t; });
+  _loadTex('assets/r2/textures/floor_limehouse.png',      function(t) { FLOOR_TEXTURES[8]  = t; });
+  _loadTex('assets/r2/textures/floor_evaporator.png',     function(t) { FLOOR_TEXTURES[9]  = t; });
+  _loadTex('assets/r2/textures/floor_panhouse.png',       function(t) { FLOOR_TEXTURES[10] = t; });
+  _loadTex('assets/r2/textures/floor_sugartower.png',     function(t) { FLOOR_TEXTURES[11] = t; });
+  _loadTex('assets/r2/textures/ceiling_beetyard.png',     function(t) { CEIL_TEXTURES[4]  = t; });
+  _loadTex('assets/r2/textures/ceiling_washhouse.png',    function(t) { CEIL_TEXTURES[5]  = t; });
+  _loadTex('assets/r2/textures/ceiling_slicefloor.png',   function(t) { CEIL_TEXTURES[6]  = t; });
+  _loadTex('assets/r2/textures/ceiling_diffusion.png',    function(t) { CEIL_TEXTURES[7]  = t; });
+  _loadTex('assets/r2/textures/ceiling_limehouse.png',    function(t) { CEIL_TEXTURES[8]  = t; });
+  _loadTex('assets/r2/textures/ceiling_evaporator.png',   function(t) { CEIL_TEXTURES[9]  = t; });
+  _loadTex('assets/r2/textures/ceiling_panhouse.png',     function(t) { CEIL_TEXTURES[10] = t; });
+  _loadTex('assets/r2/textures/ceiling_sugartower.png',   function(t) { CEIL_TEXTURES[11] = t; });
 
   _loadSprite('assets/items/program.png',      'program');
   _loadSprite('assets/items/program-full.png', 'program-full');

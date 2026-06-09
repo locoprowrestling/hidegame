@@ -15,11 +15,13 @@ function makeGM() {
     x: s.x, y: s.y,
     floor:         0,
     patrolIdx:     0,
-    state:         'patrol',  // 'patrol' | 'chase' | 'to_stairs'
+    state:         'patrol',  // patrol | chase | to_stairs | ambush | camp | hunt | search
     lostSightMs:   0,
     floorChangeMs: GM_FLOOR_CHANGE_MS,
     stairTarget:   null,
     nextFloor:     null,
+    ambushX: 0, ambushY: 0, ambushMs: 0,
+    campMs: 0, huntRepathMs: 0, searchMs: 0,
     // BFS path following
     path:          null,      // [{x,y}] tile-centre steps, or null = needs compute
     pathIdx:       0,
