@@ -105,7 +105,7 @@ function drawWin(ctx, gs) {
   var roundIdx = (gs && gs.currentRound) || 0;
   var rd = ROUNDS[roundIdx];
 
-  var bgKey = roundIdx >= 1 ? 'screen-win-r2' : 'screen-win';
+  var bgKey = roundIdx === 2 ? 'screen-win-r3' : roundIdx === 1 ? 'screen-win-r2' : 'screen-win';
   var bg = SPRITE_TEXTURES[bgKey] || SPRITE_TEXTURES['screen-win'];
   if (bg) {
     ctx.drawImage(bg.canvas, 0, 0, CANVAS_W, CANVAS_H);
@@ -315,8 +315,11 @@ function drawPickupFlash(ctx, gs) {
   ctx.fillStyle = 'rgba(200,160,60,' + (alpha * 0.25).toFixed(2) + ')';
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Program booklet art centred on screen
-  var tex = SPRITE_TEXTURES['program-full'];
+  // Collectible art centred on screen — pick full-size sprite for current round
+  var fullKey = gs.currentRound === 2 ? 'room-key'
+              : gs.currentRound === 1 ? 'punch-card-full'
+              : 'program-full';
+  var tex = SPRITE_TEXTURES[fullKey] || SPRITE_TEXTURES['program-full'];
   if (tex) {
     var size = Math.round(CANVAS_H * 0.55);
     ctx.globalAlpha = alpha;

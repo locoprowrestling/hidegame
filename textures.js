@@ -5,7 +5,7 @@ var CEIL_TEXTURES   = {};  // keyed by floor index 0-3
 var SPRITE_TEXTURES = {};  // keyed by name; stored as {canvas, w, h} for drawImage
 
 var _texLoadCount = 0;
-var _texLoadTotal = 36;  // 5 R1 walls + 5 R2 walls + 4+8 floors + 4+8 ceilings + sprites
+var _texLoadTotal = 68;  // 5 R1 + 5 R2 + 5 R3 + 4 OW walls + (4+8+10) floors + (4+8+10) ceilings + sprites
 
 function _loadTex(src, cb) {
   var img = new Image();
@@ -95,6 +95,17 @@ function loadTextures() {
   _loadTex('assets/r2/textures/wall_lime.png',          function(t) { WALL_TEXTURES[8]  = t; });
   _loadTex('assets/r2/textures/wall_pipemetal.png',     function(t) { WALL_TEXTURES[9]  = t; });
   _loadTex('assets/r2/textures/wall_sugar.png',         function(t) { WALL_TEXTURES[10] = t; });
+  // Round 3 walls
+  _loadTex('assets/r3/textures/wall_wallpaper.png',     function(t) { WALL_TEXTURES[11] = t; });
+  _loadTex('assets/r3/textures/wall_mahogany.png',      function(t) { WALL_TEXTURES[12] = t; });
+  _loadTex('assets/r3/textures/wall_tile.png',          function(t) { WALL_TEXTURES[13] = t; });
+  _loadTex('assets/r3/textures/wall_gilt.png',          function(t) { WALL_TEXTURES[14] = t; });
+  _loadTex('assets/r3/textures/wall_cellarstone.png',   function(t) { WALL_TEXTURES[15] = t; });
+  // Overworld exterior walls
+  _loadTex('assets/overworld/textures/wall_opera_facade.png',  function(t) { WALL_TEXTURES[17] = t; });
+  _loadTex('assets/overworld/textures/wall_mill_facade.png',   function(t) { WALL_TEXTURES[18] = t; });
+  _loadTex('assets/overworld/textures/wall_hotel_facade.png',  function(t) { WALL_TEXTURES[19] = t; });
+  _loadTex('assets/overworld/textures/wall_hedge.png',         function(t) { WALL_TEXTURES[20] = t; });
   // Round 1 floors + ceilings
   _loadTex('assets/textures/floor_foyer.png',        function(t) { FLOOR_TEXTURES[0] = t; });
   _loadTex('assets/textures/floor_auditorium.png',   function(t) { FLOOR_TEXTURES[1] = t; });
@@ -121,6 +132,27 @@ function loadTextures() {
   _loadTex('assets/r2/textures/ceiling_evaporator.png',   function(t) { CEIL_TEXTURES[9]  = t; });
   _loadTex('assets/r2/textures/ceiling_panhouse.png',     function(t) { CEIL_TEXTURES[10] = t; });
   _loadTex('assets/r2/textures/ceiling_sugartower.png',   function(t) { CEIL_TEXTURES[11] = t; });
+  // Round 3 floors + ceilings (indices 12–21 map to R3 floor 0–9)
+  _loadTex('assets/r3/textures/floor_lobby.png',        function(t) { FLOOR_TEXTURES[12] = t; });
+  _loadTex('assets/r3/textures/floor_ballroom.png',     function(t) { FLOOR_TEXTURES[13] = t; });
+  _loadTex('assets/r3/textures/floor_kitchen.png',      function(t) { FLOOR_TEXTURES[14] = t; });
+  _loadTex('assets/r3/textures/floor_guestII.png',      function(t) { FLOOR_TEXTURES[15] = t; });
+  _loadTex('assets/r3/textures/floor_guestIII.png',     function(t) { FLOOR_TEXTURES[16] = t; });
+  _loadTex('assets/r3/textures/floor_guestIV.png',      function(t) { FLOOR_TEXTURES[17] = t; });
+  _loadTex('assets/r3/textures/floor_honeymoon.png',    function(t) { FLOOR_TEXTURES[18] = t; });
+  _loadTex('assets/r3/textures/floor_maids.png',        function(t) { FLOOR_TEXTURES[19] = t; });
+  _loadTex('assets/r3/textures/floor_attic.png',        function(t) { FLOOR_TEXTURES[20] = t; });
+  _loadTex('assets/r3/textures/floor_penthouse.png',    function(t) { FLOOR_TEXTURES[21] = t; });
+  _loadTex('assets/r3/textures/ceiling_lobby.png',      function(t) { CEIL_TEXTURES[12] = t; });
+  _loadTex('assets/r3/textures/ceiling_ballroom.png',   function(t) { CEIL_TEXTURES[13] = t; });
+  _loadTex('assets/r3/textures/ceiling_kitchen.png',    function(t) { CEIL_TEXTURES[14] = t; });
+  _loadTex('assets/r3/textures/ceiling_guestII.png',    function(t) { CEIL_TEXTURES[15] = t; });
+  _loadTex('assets/r3/textures/ceiling_guestIII.png',   function(t) { CEIL_TEXTURES[16] = t; });
+  _loadTex('assets/r3/textures/ceiling_guestIV.png',    function(t) { CEIL_TEXTURES[17] = t; });
+  _loadTex('assets/r3/textures/ceiling_honeymoon.png',  function(t) { CEIL_TEXTURES[18] = t; });
+  _loadTex('assets/r3/textures/ceiling_maids.png',      function(t) { CEIL_TEXTURES[19] = t; });
+  _loadTex('assets/r3/textures/ceiling_attic.png',      function(t) { CEIL_TEXTURES[20] = t; });
+  _loadTex('assets/r3/textures/ceiling_penthouse.png',  function(t) { CEIL_TEXTURES[21] = t; });
 
   _loadSprite('assets/items/program.png',      'program');
   _loadSprite('assets/items/program-full.png', 'program-full');
@@ -131,9 +163,15 @@ function loadTextures() {
   _loadSprite('assets/gm/gm-walk-a.png',       'gm-walk-a');
   _loadSprite('assets/gm/gm-walk-b.png',       'gm-walk-b');
   _loadSprite('assets/gm/gm-lunge.png',        'gm-lunge');
-  _loadSprite('assets/gm/gm-back.png',         'gm-back');
-  _loadSprite('assets/gm/gm-back-a.png',       'gm-back-a');
-  _loadSprite('assets/gm/gm-back-b.png',       'gm-back-b');
+  _loadSprite('assets/gm/gm-back.png',                'gm-back');
+  _loadSprite('assets/gm/gm-back-a.png',             'gm-back-a');
+  _loadSprite('assets/gm/gm-back-b.png',             'gm-back-b');
+  _loadSprite('assets/overworld/gm/stalker.png',     'gm-stalker');
+  _loadSprite('assets/r2/items/punch-card.png',      'punch-card');
+  _loadSprite('assets/r2/items/punch-card-full.png', 'punch-card-full');
+  _loadSprite('assets/r2/screens/win.png',           'screen-win-r2');
+  _loadSprite('assets/r3/items/room-key.png',        'room-key');
+  _loadSprite('assets/r3/screens/win.png',           'screen-win-r3');
 }
 
 loadTextures();

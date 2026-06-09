@@ -15,7 +15,7 @@ function drawSprites(ctx, player, gs) {
   if (gs.gm.floor === gs.currentFloor) {
     var gmd = dist2d(player.x, player.y, gs.gm.x, gs.gm.y);
     sprites.push({ type: 'gm', x: gs.gm.x, y: gs.gm.y, dist: gmd,
-                   frame: _gmAnimFrame(gs.gm, player) });
+                   frame: _gmAnimFrame(gs.gm, player, gs) });
   }
 
   // Sort farthest first
@@ -128,7 +128,8 @@ function _drawGMAura(ctx, screenX, y0, y1, spriteW, spriteH, fog, dist, horizon)
 }
 
 function _drawProgramColumn(ctx, col, y0, y1, texX, fog, dist) {
-  var tex = SPRITE_TEXTURES['program'];
+  var itemKey = ACTIVE_ROUND_IDX === 2 ? 'room-key' : ACTIVE_ROUND_IDX === 1 ? 'punch-card' : 'program';
+  var tex = SPRITE_TEXTURES[itemKey] || SPRITE_TEXTURES['program'];
   if (tex) {
     var srcX = Math.floor(texX * tex.w);
     ctx.drawImage(tex.canvas, srcX, 0, 1, tex.h, col, y0, 1, y1 - y0);
@@ -237,7 +238,10 @@ function _fillArrow(ctx, cx, cy, s, up) {
   ctx.fill();
 }
 
-function _gmAnimFrame(gm, player) {
+function _gmAnimFrame(gm, player, gs) {
+  // Overworld stalker — motionless watcher, use dedicated distant-silhouette sprite
+  if (gs && gs.screen === SCREEN_OVERWORLD) return 'gm-stalker';
+
   var t = Date.now();
   var speed = Math.sqrt(gm.vx * gm.vx + gm.vy * gm.vy);
 
