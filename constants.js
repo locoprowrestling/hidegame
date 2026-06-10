@@ -68,6 +68,11 @@ var WALL_DOOR_OPERA = 21;  // crimson double doors, gilt arch
 var WALL_DOOR_MILL  = 22;  // corrugated sliding door, chained
 var WALL_DOOR_HOTEL = 23;  // mahogany + brass, glowing transom
 
+// Baked facade art that faces opposite the raycaster's default UV direction.
+var WALL_TEXTURE_FLIP_X = {
+  23: true,  // Hotel entrance faces west; keep its signage readable from Main St.
+};
+
 // Fake building height — storeys drawn above the ground floor (overworld only).
 // Storey 5 and above fade hard into the night sky.
 var BUILDING_STORIES = {

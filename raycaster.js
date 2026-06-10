@@ -203,6 +203,7 @@ function castAndDraw(ctx, player, gs) {
       wallX -= Math.floor(wallX);
 
       var flipped = (side === 0 && rayDX > 0) || (side === 1 && rayDY < 0);
+      if (WALL_TEXTURE_FLIP_X[wallType]) flipped = !flipped;
       var texX = Math.floor(wallX * wallTex.w);
       if (flipped) texX = wallTex.w - texX - 1;
       texX = Math.max(0, Math.min(wallTex.w - 1, texX));
