@@ -54,6 +54,47 @@ _bgm.onerror = function() {};
 function toggleMute() {
   _muted = !_muted;
   _bgm.muted = _muted;
+  for (var k in _sfxCache) _sfxCache[k].muted = _muted;
+}
+
+// ── One-shot SFX (audio/sfx/*.wav) ────────────────────────────────────────────
+// AMB-* play randomly for atmosphere; EVT-* accompany the scare events.
+var _SFX_AMB    = ['AMB-voicescream', 'AMB-voicemoan', 'AMB-voicemoan2'];
+var _SFX_VERSES = ['EVT-verse1', 'EVT-verse2'];
+var _sfxCache = {};
+
+function playSfx(name, vol) {
+  if (_muted) return;
+  var a = _sfxCache[name];
+  if (!a) {
+    a = new Audio('audio/sfx/' + name + '.wav');
+    a.preload = 'auto';
+    a.onerror = function() {};
+    _sfxCache[name] = a;
+  }
+  try {
+    a.currentTime = 0;
+    a.volume = vol == null ? 1 : vol;
+    a.play().catch(function(){});
+  } catch (e) {}
+}
+
+function playScareLaugh() {
+  playSfx('EVT-evillaugh', 0.55);
+}
+
+function playScareVerse() {
+  playSfx(_SFX_VERSES[(Math.random() * _SFX_VERSES.length) | 0], 0.55);
+}
+
+// Ambient voices — long random gaps so they stay unsettling, not predictable
+var _ambTimer = 14000 + Math.random() * 20000;
+
+function updateAmbience(dt) {
+  _ambTimer -= dt;
+  if (_ambTimer > 0) return;
+  _ambTimer = 25000 + Math.random() * 30000;
+  playSfx(_SFX_AMB[(Math.random() * _SFX_AMB.length) | 0], 0.3);
 }
 
 // ── Heartbeat SFX — WebAudio thump that quickens with stress ──────────────────

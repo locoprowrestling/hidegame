@@ -206,19 +206,23 @@ function _updateScares(dt) {
     gs.flickerAmt   = -38;
     gs.flickerTimer = 1100 + Math.random() * 700;
     gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP * 0.6);
+    playScareLaugh();
   } else if (roll < 0.7 || gmClose) {
     // A whisper
     setWhisper(gs, _WHISPERS[Math.floor(Math.random() * _WHISPERS.length)]);
     gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP * 0.7);
+    playScareVerse();
   } else {
     // A figure that was never there — far ahead, gone in half a second
     var spot = _fakeGMSpot();
     if (spot) {
       gs.fakeGM = { x: spot.x, y: spot.y, ttl: 480 };
       gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP);
+      playScareLaugh();
     } else {
       setWhisper(gs, _WHISPERS[Math.floor(Math.random() * _WHISPERS.length)]);
       gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP * 0.7);
+      playScareVerse();
     }
   }
 }
@@ -371,6 +375,7 @@ function loop(ts) {
   // ── Overworld frame ─────────────────────────────────────────────────────────
   if (gs.screen === SCREEN_OVERWORLD) {
     updateOverworldStalker(gs.gm, p, gs, dt);
+    updateAmbience(dt);
 
     gs.stress = Math.max(0, gs.stress - STRESS_DECAY * 0.6 * (dt / 1000));
     if (gs.whisperMs > 0) gs.whisperMs -= dt;
@@ -410,6 +415,7 @@ function loop(ts) {
   updateGM(gs.gm, p, gs.currentFloor, dt, gs.stress);
   _updateStress(dt);
   _updateScares(dt);
+  updateAmbience(dt);
 
   if (gs.pickupFlash > 0) gs.pickupFlash -= dt;
   if (gs.luckyFlash  > 0) gs.luckyFlash  -= dt;
