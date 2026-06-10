@@ -59,7 +59,7 @@ function toggleMute() {
 
 // ── One-shot SFX (audio/sfx/*.wav) ────────────────────────────────────────────
 // AMB-* play randomly for atmosphere; EVT-* accompany the scare events.
-var _SFX_AMB    = ['AMB-voicescream', 'AMB-voicemoan', 'AMB-voicemoan2'];
+var _SFX_AMB    = ['AMB-voicescream', 'AMB-voicescream2', 'AMB-voicemoan', 'AMB-voicemoan2'];
 var _SFX_VERSES = ['EVT-verse1', 'EVT-verse2'];
 var _sfxCache = {};
 

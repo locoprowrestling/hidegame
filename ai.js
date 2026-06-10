@@ -80,6 +80,7 @@ function updateGM(gm, player, playerFloor, dt, stress) {
       gm.state        = 'hunt';
       gm.huntRepathMs = 0;
       gm.path         = null;
+      playSfx('EVT-feelsfear', 0.6);
     } else {
       _gmPatrol(gm, patrolSpd);
       _gmTryStartChase(gm, player);

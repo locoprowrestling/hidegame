@@ -135,16 +135,18 @@ function updateOverworldStalker(gm, player, gs, dt) {
       gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_GLIMPSE_BUMP);
       gs.flickerAmt   = -34;
       gs.flickerTimer = 320;
-      setWhisper(gs, _OW_WHISPERS[Math.floor(Math.random() * _OW_WHISPERS.length)]);
+      var oww = _OW_WHISPERS[(Math.random() * _OW_WHISPERS.length) | 0];
+      setWhisper(gs, oww.text);
+      playSfx(oww.sfx, 0.55);
     }
   }
 }
 
 var _OW_WHISPERS = [
-  '...he was never standing there...',
-  '...the town is his board. you are his piece...',
-  '...he walks these streets when the lights die...',
-  '...do not let him see you looking...',
+  { text: '...he was never standing there...',                  sfx: 'WSP-OW-never' },
+  { text: '...the town is his board. you are his piece...',     sfx: 'WSP-OW-board' },
+  { text: '...he walks these streets when the lights die...',   sfx: 'WSP-OW-streets' },
+  { text: '...do not let him see you looking...',               sfx: 'WSP-OW-looking' },
 ];
 
 // ── Door interaction ──────────────────────────────────────────────────────────

@@ -157,14 +157,22 @@ function _fullReset() {
 
 // ── Stress + scare events ─────────────────────────────────────────────────────
 var _WHISPERS = [
-  '...he knows where you are...',
-  '...keep your eyes down...',
-  '...the show never ends...',
-  '...he is counting your steps...',
-  "...don't look. don't look. don't look...",
-  '...you smell of fear...',
-  '...every door you open, he hears...',
+  { text: '...he knows where you are...',               sfx: 'WSP-knows' },
+  { text: '...keep your eyes down...',                  sfx: 'WSP-eyesdown' },
+  { text: '...the show never ends...',                  sfx: 'WSP-shownever' },
+  { text: '...he is counting your steps...',            sfx: 'WSP-counting' },
+  { text: "...don't look. don't look. don't look...",   sfx: 'WSP-dontlook' },
+  { text: '...you smell of fear...',                    sfx: 'WSP-fear' },
+  { text: '...every door you open, he hears...',        sfx: 'WSP-doors' },
 ];
+
+// Show a random whisper with its voice clip; sometimes a verse instead for variety
+function _fireWhisper() {
+  var w = _WHISPERS[(Math.random() * _WHISPERS.length) | 0];
+  setWhisper(gs, w.text);
+  if (Math.random() < 0.25) playScareVerse();
+  else playSfx(w.sfx, 0.55);
+}
 
 function _updateStress(dt) {
   var sec = dt / 1000;
@@ -209,9 +217,8 @@ function _updateScares(dt) {
     playScareLaugh();
   } else if (roll < 0.7 || gmClose) {
     // A whisper
-    setWhisper(gs, _WHISPERS[Math.floor(Math.random() * _WHISPERS.length)]);
+    _fireWhisper();
     gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP * 0.7);
-    playScareVerse();
   } else {
     // A figure that was never there — far ahead, gone in half a second
     var spot = _fakeGMSpot();
@@ -220,9 +227,8 @@ function _updateScares(dt) {
       gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP);
       playScareLaugh();
     } else {
-      setWhisper(gs, _WHISPERS[Math.floor(Math.random() * _WHISPERS.length)]);
+      _fireWhisper();
       gs.stress = Math.min(STRESS_MAX, gs.stress + STRESS_SCARE_BUMP * 0.7);
-      playScareVerse();
     }
   }
 }
@@ -437,6 +443,7 @@ function loop(ts) {
     } else {
       stopHeartbeat();
       playTrack('gameover');
+      playSfx('EVT-performanceover', 0.7);
       gs.screen = SCREEN_GAMEOVER;
       requestAnimationFrame(loop);
       return;
