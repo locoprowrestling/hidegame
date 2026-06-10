@@ -204,15 +204,24 @@ function drawStairIndicators(ctx, player, gs) {
       _fillEllipse(ctx, screenX, floorY, haloW, haloH);
     }
 
-    // Outer glow
-    ctx.globalAlpha = alpha * pulse * 0.35;
-    ctx.fillStyle = '#0088ff';
-    _fillArrow(ctx, screenX, screenY, size * 1.65, goingUp);
+    // Arrow — pixel-art sprite if the asset exists, vector polygons otherwise
+    var arrowSpr = SPRITE_TEXTURES[goingUp ? 'ui-arrow-up' : 'ui-arrow-down'];
+    if (arrowSpr) {
+      var aw = Math.round(size * 2.1);
+      ctx.globalAlpha = alpha * pulse;
+      ctx.drawImage(arrowSpr.canvas,
+        screenX - (aw >> 1), Math.round(screenY) - (aw >> 1), aw, aw);
+    } else {
+      // Outer glow
+      ctx.globalAlpha = alpha * pulse * 0.35;
+      ctx.fillStyle = '#0088ff';
+      _fillArrow(ctx, screenX, screenY, size * 1.65, goingUp);
 
-    // Bright core
-    ctx.globalAlpha = alpha * pulse;
-    ctx.fillStyle = '#99ddff';
-    _fillArrow(ctx, screenX, screenY, size, goingUp);
+      // Bright core
+      ctx.globalAlpha = alpha * pulse;
+      ctx.fillStyle = '#99ddff';
+      _fillArrow(ctx, screenX, screenY, size, goingUp);
+    }
 
     ctx.globalAlpha = 1.0;
   }

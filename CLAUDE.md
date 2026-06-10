@@ -107,3 +107,5 @@ All numeric knobs are in `constants.js`. Key ones for difficulty:
 ## Asset generation
 
 Image prompts live in `prompts/`. Textures are 64×64 px pixel art PNG (hard-edged, banded shading, no anti-aliasing). GM sprites are 64×128 px portrait with transparency. After generating, resize with `sips` if needed and drop into `assets/`. PNG slots are wired in `textures.js` — add new paths there to activate them.
+
+**UI / HUD chrome**: prompts under `prompts/ui/` (see its `style-guide.md` for the shared palette, per-file dimensions, and ImageGen post-processing commands). Finished PNGs go in `assets/ui/`. Every UI sprite — HUD bars, pips, indicator arrows, map parchment, title logo, LUCKY stamp, warning eyes — is an optional override: the renderer keeps its procedural drawing as fallback when the PNG is absent.

@@ -190,7 +190,31 @@ function loadTextures() {
   _loadSprite('assets/r2/items/punch-card-full.png', 'punch-card-full');
   _loadSprite('assets/r2/screens/win.png',           'screen-win-r2');
   _loadSprite('assets/r3/items/room-key.png',        'room-key');
+  _loadSprite('assets/r3/items/room-key-full.png',   'room-key-full');
   _loadSprite('assets/r3/screens/win.png',           'screen-win-r3');
+
+  // UI / HUD chrome — optional polish sprites (prompts under prompts/ui/).
+  // Every one of these has a procedural fallback in renderer.js / sprites.js /
+  // overworld.js; missing files cost nothing.
+  _loadSprite('assets/ui/topbar.png',           'ui-topbar');
+  _loadSprite('assets/ui/bottombar.png',        'ui-bottombar');
+  _loadSprite('assets/ui/map_parchment.png',    'ui-map');
+  _loadSprite('assets/ui/logo.png',             'ui-logo');
+  _loadSprite('assets/ui/lucky.png',            'ui-lucky');
+  _loadSprite('assets/ui/eye_open.png',         'ui-eye-open');
+  _loadSprite('assets/ui/eye_shut.png',         'ui-eye-shut');
+  _loadSprite('assets/ui/arrow_up.png',         'ui-arrow-up');
+  _loadSprite('assets/ui/arrow_down.png',       'ui-arrow-down');
+  _loadSprite('assets/ui/arrow_door.png',       'ui-arrow-door');
+  _loadSprite('assets/ui/arrow_locked.png',     'ui-arrow-locked');
+  ['program', 'card', 'key'].forEach(function(item) {
+    _loadSprite('assets/ui/pip_' + item + '_lit.png', 'ui-pip-' + item + '-lit');
+    _loadSprite('assets/ui/pip_' + item + '_dim.png', 'ui-pip-' + item + '-dim');
+  });
+  ['opera', 'mill', 'hotel'].forEach(function(b) {
+    _loadSprite('assets/ui/stage_' + b + '_lit.png', 'ui-stage-' + b + '-lit');
+    _loadSprite('assets/ui/stage_' + b + '_dim.png', 'ui-stage-' + b + '-dim');
+  });
 }
 
 loadTextures();

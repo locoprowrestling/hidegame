@@ -184,12 +184,20 @@ function drawDoorIndicators(ctx, player, gs) {
     var pulse = 0.72 + 0.28 * Math.sin(Date.now() * 0.004 + i);
     var lk = dr.locked();
 
-    ctx.globalAlpha = alpha * pulse * 0.35;
-    ctx.fillStyle = lk ? '#552222' : '#aa7700';
-    _fillArrow(ctx, screenX, screenY, size * 1.65, false);
-    ctx.globalAlpha = alpha * pulse;
-    ctx.fillStyle = lk ? '#aa4444' : '#ffd966';
-    _fillArrow(ctx, screenX, screenY, size, false);
+    var arrowSpr = SPRITE_TEXTURES[lk ? 'ui-arrow-locked' : 'ui-arrow-door'];
+    if (arrowSpr) {
+      var aw = Math.round(size * 2.1);
+      ctx.globalAlpha = alpha * pulse;
+      ctx.drawImage(arrowSpr.canvas,
+        screenX - (aw >> 1), Math.round(screenY) - (aw >> 1), aw, aw);
+    } else {
+      ctx.globalAlpha = alpha * pulse * 0.35;
+      ctx.fillStyle = lk ? '#552222' : '#aa7700';
+      _fillArrow(ctx, screenX, screenY, size * 1.65, false);
+      ctx.globalAlpha = alpha * pulse;
+      ctx.fillStyle = lk ? '#aa4444' : '#ffd966';
+      _fillArrow(ctx, screenX, screenY, size, false);
+    }
     ctx.globalAlpha = 1.0;
   }
 }
@@ -197,8 +205,13 @@ function drawDoorIndicators(ctx, player, gs) {
 // ── Overworld HUD ─────────────────────────────────────────────────────────────
 function drawOverworldHUD(ctx, gs) {
   // Top bar
-  ctx.fillStyle = 'rgba(0,0,0,0.82)';
-  ctx.fillRect(0, 0, CANVAS_W, 20);
+  var topbar = SPRITE_TEXTURES['ui-topbar'];
+  if (topbar) {
+    ctx.drawImage(topbar.canvas, 0, 0, CANVAS_W, 23);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillRect(0, 0, CANVAS_W, 20);
+  }
   ctx.fillStyle = '#806040';
   ctx.font = '10px "VT323", monospace';
   ctx.textAlign = 'left';
@@ -206,17 +219,29 @@ function drawOverworldHUD(ctx, gs) {
 
   // Stage completion pips — right
   var done = [r1Complete(), r2Complete(), _isComplete(ROUNDS[2].completionKey)];
+  var stageNames = ['opera', 'mill', 'hotel'];
   ctx.textAlign = 'right';
   for (var i = 2; i >= 0; i--) {
-    ctx.fillStyle = done[i] ? '#c0a060' : '#2a2a2a';
-    ctx.fillRect(CANVAS_W - 4 - (2 - i) * 11, 7, 8, 7);
+    var px = CANVAS_W - 12 - (2 - i) * 11;
+    var spr = SPRITE_TEXTURES['ui-stage-' + stageNames[i] + '-' + (done[i] ? 'lit' : 'dim')];
+    if (spr) {
+      ctx.drawImage(spr.canvas, px, 6, 8, 8);
+    } else {
+      ctx.fillStyle = done[i] ? '#c0a060' : '#2a2a2a';
+      ctx.fillRect(px, 7, 8, 7);
+    }
   }
   ctx.fillStyle = '#555548';
-  ctx.fillText('STAGES', CANVAS_W - 38, 14);
+  ctx.fillText('STAGES', CANVAS_W - 46, 14);
 
   // Bottom bar
-  ctx.fillStyle = 'rgba(0,0,0,0.82)';
-  ctx.fillRect(0, CANVAS_H - 18, CANVAS_W, 18);
+  var botbar = SPRITE_TEXTURES['ui-bottombar'];
+  if (botbar) {
+    ctx.drawImage(botbar.canvas, 0, CANVAS_H - 18, CANVAS_W, 18);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillRect(0, CANVAS_H - 18, CANVAS_W, 18);
+  }
   ctx.font = '13px "VT323", monospace';
   ctx.textAlign = 'center';
 

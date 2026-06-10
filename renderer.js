@@ -44,11 +44,19 @@ function drawTitle(ctx) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
-  // Title
-  ctx.fillStyle = '#c0a060';
-  ctx.font = 'bold 20px "Press Start 2P", serif';
+  // Title — pixel-art logotype if the asset exists, font text otherwise
+  var logo = SPRITE_TEXTURES['ui-logo'];
+  if (logo) {
+    var lw = 288;
+    var lh = Math.min(64, Math.round(lw * logo.h / logo.w));
+    ctx.drawImage(logo.canvas, Math.round((CANVAS_W - lw) / 2), 10, lw, lh);
+  } else {
+    ctx.fillStyle = '#c0a060';
+    ctx.font = 'bold 20px "Press Start 2P", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('GAMES MASTER', CANVAS_W / 2, 36);
+  }
   ctx.textAlign = 'center';
-  ctx.fillText('GAMES MASTER', CANVAS_W / 2, 36);
 
   ctx.fillStyle = '#8a7050';
   ctx.font = '14px "VT323", monospace';
@@ -156,9 +164,14 @@ function drawHUD(ctx, gs) {
   var floorDone = floorCollectedCount(floorIdx);
   var allDone   = totalCollected();
 
-  // Top bar
-  ctx.fillStyle = 'rgba(0,0,0,0.82)';
-  ctx.fillRect(0, 0, CANVAS_W, 20);
+  // Top bar — carved-wood chrome sprite if present, flat strip otherwise
+  var topbar = SPRITE_TEXTURES['ui-topbar'];
+  if (topbar) {
+    ctx.drawImage(topbar.canvas, 0, 0, CANVAS_W, 23);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillRect(0, 0, CANVAS_W, 20);
+  }
 
   // Floor name — left
   ctx.fillStyle = '#806040';
@@ -168,11 +181,19 @@ function drawHUD(ctx, gs) {
 
   // Per-floor program pips — center
   var pipTotal = ROUNDS[gs.currentRound].programsPerFloor;
+  var pipItem  = ['program', 'card', 'key'][gs.currentRound];
+  var pipLit   = SPRITE_TEXTURES['ui-pip-' + pipItem + '-lit'];
+  var pipDim   = SPRITE_TEXTURES['ui-pip-' + pipItem + '-dim'];
   var pipW = pipTotal * 9 - 2;
   var pipStartX = Math.round((CANVAS_W - pipW) / 2);
   for (var j = 0; j < pipTotal; j++) {
-    ctx.fillStyle = PROGRAMS[j].collected ? '#c0a060' : '#2a2a2a';
-    ctx.fillRect(pipStartX + j * 9, 7, 7, 7);
+    var pipSpr = PROGRAMS[j].collected ? pipLit : pipDim;
+    if (pipSpr) {
+      ctx.drawImage(pipSpr.canvas, pipStartX + j * 9, 6, 8, 8);
+    } else {
+      ctx.fillStyle = PROGRAMS[j].collected ? '#c0a060' : '#2a2a2a';
+      ctx.fillRect(pipStartX + j * 9, 7, 7, 7);
+    }
   }
 
   // Global count — right
@@ -181,10 +202,12 @@ function drawHUD(ctx, gs) {
   ctx.textAlign = 'right';
   ctx.fillText(allDone + '/' + totalPrograms(), CANVAS_W - 4, 14);
 
-  // Stress bar — thin strip under the top bar
+  // Stress bar — thin strip under the top bar (the topbar art bakes in the groove)
   var sFrac = gs.stress / STRESS_MAX;
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(0, 20, CANVAS_W, 3);
+  if (!topbar) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 20, CANVAS_W, 3);
+  }
   if (sFrac > 0.01) {
     var sr = Math.round(90 + 165 * sFrac);
     var sg = Math.round(70 * (1 - sFrac));
@@ -209,18 +232,36 @@ function drawHUD(ctx, gs) {
   ctx.font = 'bold 11px "VT323", monospace';
   ctx.textAlign = 'right';
   if (gs.gm.state === 'chase' && onSameFloor) {
-    if (flash) { ctx.fillStyle = '#ff2200'; ctx.fillText('RUN', CANVAS_W - 4, 13); }
+    if (flash) {
+      ctx.fillStyle = '#ff2200';
+      ctx.fillText('RUN', CANVAS_W - 4, 13);
+      var eyeO = SPRITE_TEXTURES['ui-eye-open'];
+      if (eyeO) ctx.drawImage(eyeO.canvas,
+        CANVAS_W - 4 - Math.ceil(ctx.measureText('RUN').width) - 14, 2, 11, 11);
+    }
   } else if (onSameFloor && gmDist < 6) {
     var danger = Math.max(0, 1 - (gmDist - 1) / 5);
     if (flash && danger > 0.2) {
       ctx.fillStyle = 'rgba(200,80,0,' + danger.toFixed(2) + ')';
       ctx.fillText("DON'T LOOK", CANVAS_W - 4, 13);
+      var eyeS = SPRITE_TEXTURES['ui-eye-shut'];
+      if (eyeS) {
+        ctx.globalAlpha = danger;
+        ctx.drawImage(eyeS.canvas,
+          CANVAS_W - 4 - Math.ceil(ctx.measureText("DON'T LOOK").width) - 14, 2, 11, 11);
+        ctx.globalAlpha = 1.0;
+      }
     }
   }
 
   // Bottom bar
-  ctx.fillStyle = 'rgba(0,0,0,0.82)';
-  ctx.fillRect(0, CANVAS_H - 18, CANVAS_W, 18);
+  var botbar = SPRITE_TEXTURES['ui-bottombar'];
+  if (botbar) {
+    ctx.drawImage(botbar.canvas, 0, CANVAS_H - 18, CANVAS_W, 18);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
+    ctx.fillRect(0, CANVAS_H - 18, CANVAS_W, 18);
+  }
   ctx.font = '13px "VT323", monospace';
   ctx.textAlign = 'center';
 
@@ -316,10 +357,10 @@ function drawPickupFlash(ctx, gs) {
   ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
   // Collectible art centred on screen — pick full-size sprite for current round
-  var fullKey = gs.currentRound === 2 ? 'room-key'
-              : gs.currentRound === 1 ? 'punch-card-full'
-              : 'program-full';
-  var tex = SPRITE_TEXTURES[fullKey] || SPRITE_TEXTURES['program-full'];
+  var tex = gs.currentRound === 2 ? (SPRITE_TEXTURES['room-key-full'] || SPRITE_TEXTURES['room-key'])
+          : gs.currentRound === 1 ? SPRITE_TEXTURES['punch-card-full']
+          : SPRITE_TEXTURES['program-full'];
+  tex = tex || SPRITE_TEXTURES['program-full'];
   if (tex) {
     var size = Math.round(CANVAS_H * 0.55);
     ctx.globalAlpha = alpha;
@@ -342,21 +383,28 @@ function drawLuckyFlash(ctx, gs) {
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
   }
 
-  // "LUCKY" text — drops in from top, holds, fades out
+  // "LUCKY" — drops in from top, holds, fades out
   var textAlpha = t < 0.2 ? t / 0.2 : Math.min(1, t);
   ctx.globalAlpha = textAlpha;
-
-  // Glow layer (slightly larger, low opacity)
-  ctx.font      = 'bold 28px "Press Start 2P", monospace';
-  ctx.textAlign = 'center';
   var cx = CANVAS_W / 2, cy = CANVAS_H * 0.28;
-  ctx.fillStyle = 'rgba(255,220,50,0.35)';
-  ctx.fillText('LUCKY', cx + 1, cy + 1);
-  ctx.fillText('LUCKY', cx - 1, cy - 1);
 
-  // Core text
-  ctx.fillStyle = '#ffe033';
-  ctx.fillText('LUCKY', cx, cy);
+  var stamp = SPRITE_TEXTURES['ui-lucky'];
+  if (stamp) {
+    var sw = 140;
+    var sh = Math.round(sw * stamp.h / stamp.w);
+    ctx.drawImage(stamp.canvas, Math.round(cx - sw / 2), Math.round(cy - sh / 2), sw, sh);
+  } else {
+    // Glow layer (slightly larger, low opacity)
+    ctx.font      = 'bold 28px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,220,50,0.35)';
+    ctx.fillText('LUCKY', cx + 1, cy + 1);
+    ctx.fillText('LUCKY', cx - 1, cy - 1);
+
+    // Core text
+    ctx.fillStyle = '#ffe033';
+    ctx.fillText('LUCKY', cx, cy);
+  }
 
   ctx.globalAlpha  = 1.0;
   ctx.textAlign    = 'left';
@@ -376,9 +424,14 @@ function _drawFullMap(ctx, gs) {
   var oy = Math.round((CANVAS_H - mh) / 2);
   var fl = gs.currentFloor;
 
-  // Dim the scene behind the map
-  ctx.fillStyle = 'rgba(0,0,0,0.86)';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  // Dim the scene behind the map — scorched survey sheet if the asset exists
+  var parch = SPRITE_TEXTURES['ui-map'];
+  if (parch) {
+    ctx.drawImage(parch.canvas, 0, 0, CANVAS_W, CANVAS_H);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.86)';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+  }
 
   // Countdown + remaining uses
   var secs = Math.max(0, gs.mapTimeLeft / 1000).toFixed(1);
@@ -389,8 +442,8 @@ function _drawFullMap(ctx, gs) {
   var usesStr  = usesLeft > 0 ? '  [' + usesLeft + ' left]' : '  [none left]';
   ctx.fillText('MAP  ' + secs + 's' + usesStr, CANVAS_W / 2, oy - 3);
 
-  // Map background
-  ctx.fillStyle = '#0a0806';
+  // Map background — translucent over the parchment so its grain shows through
+  ctx.fillStyle = parch ? 'rgba(10,8,6,0.55)' : '#0a0806';
   ctx.fillRect(ox - 1, oy - 1, mw + 2, mh + 2);
 
   // Walls
