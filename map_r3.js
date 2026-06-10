@@ -3,7 +3,7 @@
 // Chars: W=wallpaper(11) D=mahogany(12) T=tile(13) G=gilt(14) S=cellar stone(15) B=wood(5)
 // Stairs convention: west (2,10) down, east (27,10) up. Row 10 open at both.
 
-var _R3CH = { 'W': 11, 'D': 12, 'T': 13, 'G': 14, 'S': 15, 'B': 5 };
+var _R3CH = { 'W': 11, 'D': 12, 'T': 13, 'G': 14, 'S': 15, 'B': 5, 'I': 23 };
 
 // ── F0 — The Lobby ────────────────────────────────────────────────────────────
 var _H0 = parseMapStrings([
@@ -26,7 +26,7 @@ var _H0 = parseMapStrings([
   'D...D....................D...D',
   'D............................D',
   'D............................D',
-  'DDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
+  'DDDDDDDDDDDDDDIIDDDDDDDDDDDDDD',
 ], _R3CH);
 
 // ── F1 — Grand Ballroom ───────────────────────────────────────────────────────

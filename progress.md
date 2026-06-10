@@ -292,3 +292,34 @@ pattern lives in this overhaul's history — re-run it after any map edit.
 - Exit (front doors, floor 0) has no visible sprite — currently proximity-only trigger.
 - GM has no "searching" state — after losing the player it returns immediately to patrol rather than investigating the last known position.
 - No ambient sound (creaking floors, distant music, dripping). Would significantly heighten dread.
+
+---
+
+## 2026-06-09 — Visual variety pass: doors, decals, fake storeys, light grading
+
+- **Entrance doors.** New solid wall types 21/22/23 (opera crimson double doors,
+  chained mill sliding door, hotel mahogany + glowing transom) cut into each
+  overworld facade at the OW_DOORS stand-points, plus interior front-door tiles
+  (R1 floor 0 south wall, R3 lobby south wall). Generated 64x64 RGB PNGs are
+  saved under `assets/overworld/textures/` and loaded by `textures.js`, overriding
+  the procedural fallbacks in `decals.js`.
+- **Wall decals.** New system (`decals.js` + raycaster sampling): posters,
+  paintings, and signage hang on individual wall faces, alpha-composited over
+  the wall texture. Hand-placed billboards/plaques on the overworld facades
+  (OW_DECALS); deterministic hash-based auto-scatter inside all three buildings
+  (~10% of eligible wall tiles). All 16 generated 48x64 RGBA artworks are saved
+  under `assets/decals/` and loaded by `textures.js`; procedural placeholders
+  remain only as fallbacks. Prompts are under `prompts/decals/`.
+- **Fake building height.** Overworld rays continue past the first hit and stack
+  upper-storey texture repeats above tall facades (BUILDING_STORIES: opera 4,
+  mill 3, hotel 7, storefronts 2), occlusion-clipped per column, each storey
+  dimmer, storeys 5+ dissolving into the sky. Upper-storey window textures
+  (one lit window on the opera and hotel) are generated as 64x64 RGB PNGs under
+  `assets/overworld/textures/` and loaded into UPPER_TEXTURES.
+- **Light grading.** Per-round near/far colour grade (ROUND_LIGHT): candle amber
+  → cold blue in the Opera House, sickly green in the Mill, gas-lamp rose →
+  violet in the Hotel, moonlight on the overworld. Organic lantern flicker,
+  light drain + warmth bleed when the GM is near (LIGHT_GM_DRAIN), and sparse
+  stars in the overworld sky.
+- Verified in browser: facades, doors, lobby, foyer portrait decal, mill grade
+  all render; no console errors.

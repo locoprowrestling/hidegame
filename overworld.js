@@ -6,8 +6,10 @@
 //
 // Chars: T=hedge/tree(20) O=opera facade(17) H=hotel facade(19) M=mill(18)
 //        B=brick storefront(4) F=wood fence(5)
+//        D=opera doors(21) I=hotel doors(23) N=mill door(22)
 
-var _OWCH = { 'T': 20, 'O': 17, 'H': 19, 'M': 18, 'B': 4, 'F': 5 };
+var _OWCH = { 'T': 20, 'O': 17, 'H': 19, 'M': 18, 'B': 4, 'F': 5,
+              'D': 21, 'I': 23, 'N': 22 };
 
 var _OW_MAP = parseMapStrings([
   'TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT',
@@ -16,7 +18,7 @@ var _OW_MAP = parseMapStrings([
   'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
   'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
   'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
-  'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
+  'T..OOOOOOOOOOD.........IHHHHHHHHHHH..T',
   'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
   'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
   'T..OOOOOOOOOOO.........HHHHHHHHHHHH..T',
@@ -31,7 +33,7 @@ var _OW_MAP = parseMapStrings([
   'T..BBBBB..BBBBB......F............F..T',
   'T..BBBBB..BBBBB......F..MMMMMMMMM.F..T',
   'T..BBBBB..BBBBB.........MMMMMMMMM.F..T',
-  'T.......................MMMMMMMMM.F..T',
+  'T.......................NMMMMMMMM.F..T',
   'T..BBBBB..BBBBB......F..MMMMMMMMM.F..T',
   'T..BBBBB..BBBBB......F..MMMMMMMMM.F..T',
   'T..BBBBB..BBBBB......F..MMMMMMMMM.F..T',

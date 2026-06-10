@@ -63,6 +63,23 @@ var WALL_FACADE_MILL  = 18;  // Sugar Mill sheet metal
 var WALL_FACADE_HOTEL = 19;  // Hotel Imperial brick front
 var WALL_HEDGE        = 20;  // trees / hedges
 
+// Wall type IDs — Doors (solid; used on facades at entrance tiles + interiors)
+var WALL_DOOR_OPERA = 21;  // crimson double doors, gilt arch
+var WALL_DOOR_MILL  = 22;  // corrugated sliding door, chained
+var WALL_DOOR_HOTEL = 23;  // mahogany + brass, glowing transom
+
+// Fake building height — storeys drawn above the ground floor (overworld only).
+// Storey 5 and above fade hard into the night sky.
+var BUILDING_STORIES = {
+   4: 2,           // brick storefronts — two-storey downtown blocks
+  17: 4, 21: 4,    // Opera House — 4 storeys
+  18: 3, 22: 3,    // Sugar Mill — 3-storey industrial block
+  19: 7, 23: 7,    // Hotel Imperial — tower, upper floors lost in the dark
+};
+var STORY_DIM        = 0.16;  // per-storey brightness falloff
+var STORY_FADE_START = 4;     // storey index where sky-fade begins (5th floor)
+var STORY_FADE_RATE  = 0.38;  // sky blend added per storey past the start
+
 // Wall base colors [r, g, b]
 var WALL_COLORS = {
   1: [38, 34, 42],
@@ -84,6 +101,9 @@ var WALL_COLORS = {
  18: [32, 32, 30],
  19: [52, 30, 24],
  20: [14, 28, 12],
+ 21: [70, 26, 20],
+ 22: [44, 34, 24],
+ 23: [52, 38, 18],
 };
 
 // Atmosphere
@@ -96,6 +116,20 @@ var OW_SKY_COLOR    = [9, 10, 22];
 var OW_GROUND_COLOR = [13, 11, 9];
 var OW_FOG_DIST     = 17.0;
 var OW_MAX_RAY_DEPTH = 52;
+
+// ── Light grading ─────────────────────────────────────────────────────────────
+// Per-channel multipliers on texture colour: `near` is the tint right at the
+// player (their lantern), `far` is the tint things shift toward as they recede
+// into the fog. Keep every value ≤ 1.0 — the raycaster does not clamp.
+var ROUND_LIGHT = [
+  { near: [1.00, 0.87, 0.64], far: [0.52, 0.60, 0.82] },  // OH: candle amber → cold blue dark
+  { near: [0.80, 0.97, 0.86], far: [0.48, 0.60, 0.58] },  // Mill: sickly industrial green
+  { near: [1.00, 0.82, 0.76], far: [0.56, 0.48, 0.68] },  // Hotel: gas-lamp rose → violet dark
+];
+var OW_LIGHT = { near: [0.78, 0.84, 1.00], far: [0.62, 0.68, 1.00] };  // moonlight
+
+var LIGHT_GM_DRAIN = 0.28;  // max light loss when the GM is on top of you
+var LIGHT_GM_RANGE = 7.0;   // tiles — drain begins inside this distance
 
 // Screens
 var SCREEN_ROUND_SELECT = 'round_select';
