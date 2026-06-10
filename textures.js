@@ -44,6 +44,24 @@ function _loadTex(src, cb, removeBg) {
           if (!visited[ns[n]] && isBg(ns[n])) { visited[ns[n]] = 1; queue.push(ns[n]); }
         }
       }
+      // Despill: remove dark-green fringe pixels adjacent to removed background.
+      // AI chroma-key bleeds bright green into artwork edges, leaving pixels too
+      // dark to match the corner background but still visibly green.
+      var fringe = new Uint8Array(w * h);
+      for (var fy = 0; fy < h; fy++) {
+        for (var fx = 0; fx < w; fx++) {
+          var fp = fy * w + fx;
+          if (d[fp * 4 + 3] === 0) continue;
+          var hasT = (fx > 0   && d[(fp-1)*4+3] === 0) ||
+                     (fx < w-1 && d[(fp+1)*4+3] === 0) ||
+                     (fy > 0   && d[(fp-w)*4+3] === 0) ||
+                     (fy < h-1 && d[(fp+w)*4+3] === 0);
+          if (!hasT) continue;
+          var fr = d[fp*4], fg = d[fp*4+1], fb = d[fp*4+2];
+          if (fg > 100 && fg > fr * 1.4 && fg > fb * 1.4) fringe[fp] = 1;
+        }
+      }
+      for (var fn = 0; fn < w * h; fn++) { if (fringe[fn]) d[fn * 4 + 3] = 0; }
     }
     cb({ data: id.data, w: img.width, h: img.height });
     if (++_texLoadCount >= _texLoadTotal) _texLoadCount = _texLoadTotal;
