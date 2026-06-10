@@ -73,6 +73,7 @@ Use these exact colours so UI chrome matches the in-game HUD text and markers.
 | `stage-pips.md` | `assets/ui/stage_{opera,mill,hotel}_{lit,dim}.png` | 8 × 8 ×6 | yes | overworld top-bar stage tracker |
 | `indicator-arrows.md` | `assets/ui/arrow_{up,down,door,locked}.png` | 32 × 32 ×4 | yes | floating stair / door beacons |
 | `map-parchment.md` | `assets/ui/map_parchment.png` | 320 × 200 | no | Tab map overlay background |
+| `map-markers.md` | `assets/ui/map_{you,gm,stairs}.png` + `map_item_{program,card,key}.png` | 8 × 8 ×6 | yes | Tab map markers + legend swatches |
 | `title-logo.md` | `assets/ui/logo.png` | 288 × 64 | yes | title screen logotype |
 | `lucky-stamp.md` | `assets/ui/lucky.png` | 128 × 48 | yes | 4% lucky-escape flash |
 | `eye-warning.md` | `assets/ui/eye_{open,shut}.png` | 16 × 16 ×2 | yes | RUN / DON'T LOOK proximity warnings |

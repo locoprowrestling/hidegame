@@ -458,35 +458,65 @@ function _drawFullMap(ctx, gs) {
     }
   }
 
-  // Stairs — blue squares
+  // Marker sprites — optional PNG overrides, procedural squares as fallback
+  var itemKind   = ['program', 'card', 'key'][gs.currentRound] || 'program';
+  var sprStairs  = SPRITE_TEXTURES['ui-map-stairs'];
+  var sprItem    = SPRITE_TEXTURES['ui-map-item-' + itemKind];
+  var sprGM      = SPRITE_TEXTURES['ui-map-gm'];
+  var sprYou     = SPRITE_TEXTURES['ui-map-you'];
+
+  // Stairs — blue squares (exits store tile corners; +0.5 centres them like items)
   var exits = FLOORS[fl].exits;
   for (var e = 0; e < exits.length; e++) {
-    var ex = exits[e];
-    ctx.fillStyle = '#4499ff';
-    ctx.fillRect(ox + Math.round(ex.x * T) - 2, oy + Math.round(ex.y * T) - 2, 5, 5);
+    var exX = ox + Math.round((exits[e].x + 0.5) * T);
+    var exY = oy + Math.round((exits[e].y + 0.5) * T);
+    if (sprStairs) {
+      ctx.drawImage(sprStairs.canvas, exX - 4, exY - 4, 8, 8);
+    } else {
+      ctx.fillStyle = '#4499ff';
+      ctx.fillRect(exX - 2, exY - 2, 5, 5);
+    }
   }
 
   // Uncollected programs — gold squares
   for (var i = 0; i < PROGRAMS.length; i++) {
     if (PROGRAMS[i].collected) continue;
-    ctx.fillStyle = '#c0a060';
-    ctx.fillRect(ox + Math.round(PROGRAMS[i].x * T) - 2, oy + Math.round(PROGRAMS[i].y * T) - 2, 4, 4);
+    var prX = ox + Math.round(PROGRAMS[i].x * T);
+    var prY = oy + Math.round(PROGRAMS[i].y * T);
+    if (sprItem) {
+      ctx.drawImage(sprItem.canvas, prX - 4, prY - 4, 8, 8);
+    } else {
+      ctx.fillStyle = '#c0a060';
+      ctx.fillRect(prX - 2, prY - 2, 4, 4);
+    }
   }
 
   // Games Master — red, pulses when chasing
   if (gs.gm.floor === fl) {
     var gmFlash = gs.gm.state !== 'chase' || Math.floor(Date.now() / 180) % 2 === 0;
     if (gmFlash) {
+      var gmX = ox + Math.round(gs.gm.x * T);
+      var gmY = oy + Math.round(gs.gm.y * T);
       ctx.fillStyle = 'rgba(255,0,0,0.35)';
-      ctx.fillRect(ox + Math.round(gs.gm.x * T) - 3, oy + Math.round(gs.gm.y * T) - 3, 7, 7);
-      ctx.fillStyle = '#ff2200';
-      ctx.fillRect(ox + Math.round(gs.gm.x * T) - 2, oy + Math.round(gs.gm.y * T) - 2, 4, 4);
+      ctx.fillRect(gmX - 3, gmY - 3, 7, 7);
+      if (sprGM) {
+        ctx.drawImage(sprGM.canvas, gmX - 4, gmY - 4, 8, 8);
+      } else {
+        ctx.fillStyle = '#ff2200';
+        ctx.fillRect(gmX - 2, gmY - 2, 4, 4);
+      }
     }
   }
 
   // Player — white
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(ox + Math.round(gs.player.x * T) - 2, oy + Math.round(gs.player.y * T) - 2, 4, 4);
+  var plX = ox + Math.round(gs.player.x * T);
+  var plY = oy + Math.round(gs.player.y * T);
+  if (sprYou) {
+    ctx.drawImage(sprYou.canvas, plX - 4, plY - 4, 8, 8);
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(plX - 2, plY - 2, 4, 4);
+  }
   // Facing direction tick
   ctx.fillStyle = '#88ff88';
   ctx.fillRect(
@@ -500,28 +530,42 @@ function _drawFullMap(ctx, gs) {
   ctx.lineWidth = 1;
   ctx.strokeRect(ox - 1, oy - 1, mw + 2, mh + 2);
 
-  // Legend — centred below map
+  // Legend — centred below map, spaced by measured text width so labels
+  // never collide (fixed 70 px slots used to overlap on long GM labels)
   var ly = oy + mh + 13;
   ctx.font = '11px "VT323", monospace';
-  ctx.textAlign = 'center';
 
   var gmOnFloor = gs.gm.floor === fl;
   var legendItems = [
-    { color: '#ffffff', label: 'YOU' },
-    { color: gmOnFloor ? '#ff2200' : '#442200', label: gmOnFloor ? 'GAMES MASTER' : 'GM (other floor)' },
-    { color: '#c0a060', label: 'PROGRAM' },
-    { color: '#4499ff', label: 'STAIRS' },
+    { spr: sprYou,    color: '#ffffff', label: 'YOU' },
+    { spr: sprGM,     color: gmOnFloor ? '#ff2200' : '#442200',
+      label: gmOnFloor ? 'GAMES MASTER' : 'GM (AWAY)', dim: !gmOnFloor },
+    { spr: sprItem,   color: '#c0a060', label: itemKind.toUpperCase() + 'S' },
+    { spr: sprStairs, color: '#4499ff', label: 'STAIRS' },
   ];
 
-  var totalW = legendItems.length * 70;
-  var lx = Math.round(CANVAS_W / 2 - totalW / 2) + 8;
-  ctx.textAlign = 'left';
+  var SWATCH = 7, SW_GAP = 3, ITEM_GAP = 12;
+  var liWidths = [], legendW = 0;
   for (var li = 0; li < legendItems.length; li++) {
-    ctx.fillStyle = legendItems[li].color;
-    ctx.fillRect(lx, ly - 7, 6, 6);
-    ctx.fillStyle = gmOnFloor || li !== 1 ? '#888' : '#555';
-    ctx.fillText(' ' + legendItems[li].label, lx + 6, ly);
-    lx += 70;
+    var liW = SWATCH + SW_GAP + Math.ceil(ctx.measureText(legendItems[li].label).width);
+    liWidths.push(liW);
+    legendW += liW + (li < legendItems.length - 1 ? ITEM_GAP : 0);
+  }
+  var lx = Math.round((CANVAS_W - legendW) / 2);
+  ctx.textAlign = 'left';
+  for (var lj = 0; lj < legendItems.length; lj++) {
+    var leg = legendItems[lj];
+    if (leg.dim) ctx.globalAlpha = 0.5;
+    if (leg.spr) {
+      ctx.drawImage(leg.spr.canvas, lx, ly - 8, 8, 8);
+    } else {
+      ctx.fillStyle = leg.color;
+      ctx.fillRect(lx, ly - 7, 6, 6);
+    }
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = leg.dim ? '#555' : '#888';
+    ctx.fillText(leg.label, lx + SWATCH + SW_GAP, ly);
+    lx += liWidths[lj] + ITEM_GAP;
   }
 }
 

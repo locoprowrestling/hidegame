@@ -263,6 +263,13 @@ function loadTextures() {
     _loadSprite('assets/ui/stage_' + b + '_lit.png', 'ui-stage-' + b + '-lit');
     _loadSprite('assets/ui/stage_' + b + '_dim.png', 'ui-stage-' + b + '-dim');
   });
+  // Tab-map marker glyphs (prompts/ui/map-markers.md) — 8×8 each
+  _loadSprite('assets/ui/map_you.png',          'ui-map-you');
+  _loadSprite('assets/ui/map_gm.png',           'ui-map-gm');
+  _loadSprite('assets/ui/map_stairs.png',       'ui-map-stairs');
+  ['program', 'card', 'key'].forEach(function(item) {
+    _loadSprite('assets/ui/map_item_' + item + '.png', 'ui-map-item-' + item);
+  });
 }
 
 loadTextures();
