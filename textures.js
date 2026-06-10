@@ -17,18 +17,18 @@ function _loadTex(src, cb, removeBg) {
     var id = cx.getImageData(0, 0, img.width, img.height);
     if (removeBg) {
       var d = id.data, w = c.width, h = c.height;
+      // Sample top-left corner to detect background color (handles white or chroma-key green)
+      var bgR = d[0], bgG = d[1], bgB = d[2];
       var visited = new Uint8Array(w * h);
       var queue = [];
-      function nearWhite(p) {
-        var i = p * 4, r = d[i], g = d[i+1], b = d[i+2];
-        var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
-        var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
-        return (mx - mn) < 50 && (r + g + b) > 450;
+      function isBg(p) {
+        var i = p * 4, dr = d[i] - bgR, dg = d[i+1] - bgG, db = d[i+2] - bgB;
+        return dr*dr + dg*dg + db*db < 3600; // tolerance ~60 per channel
       }
       for (var bx = 0; bx < w; bx++) {
         for (var by = 0; by < h; by += (bx === 0 || bx === w - 1) ? 1 : h - 1) {
           var bp = by * w + bx;
-          if (!visited[bp] && nearWhite(bp)) { visited[bp] = 1; queue.push(bp); }
+          if (!visited[bp] && isBg(bp)) { visited[bp] = 1; queue.push(bp); }
         }
       }
       while (queue.length) {
@@ -41,7 +41,7 @@ function _loadTex(src, cb, removeBg) {
         if (py > 0)     ns.push(p - w);
         if (py < h - 1) ns.push(p + w);
         for (var n = 0; n < ns.length; n++) {
-          if (!visited[ns[n]] && nearWhite(ns[n])) { visited[ns[n]] = 1; queue.push(ns[n]); }
+          if (!visited[ns[n]] && isBg(ns[n])) { visited[ns[n]] = 1; queue.push(ns[n]); }
         }
       }
     }
