@@ -8,57 +8,81 @@
 > loader keys white out automatically).**
 
 The overworld top bar shows three "STAGES" completion markers at the right
-edge (`drawOverworldHUD` in `overworld.js`) — currently flat squares. Each
-building gets a glyph with a **lit** (round survived, gold) and **dim**
-(not yet, dark) state, drawn at y 6 on the `#2a1f0e` top-bar wood:
+edge (`drawOverworldHUD` in `overworld.js`). Each round is represented by its
+Roman numeral — **I**, **II**, or **III** — with a **lit** (round survived,
+gold) and **dim** (not yet, dark) state, drawn at y 6 on the `#2a1f0e`
+top-bar wood:
 
-| File | Building |
-|------|----------|
-| `stage_opera_{lit,dim}.png` | The Opera House |
-| `stage_mill_{lit,dim}.png` | The Sugar Works |
-| `stage_hotel_{lit,dim}.png` | Hotel Imperial |
+| File | Round | Numeral |
+|------|-------|---------|
+| `stage_opera_{lit,dim}.png` | I — The Opera House | `I` |
+| `stage_mill_{lit,dim}.png` | II — The Sugar Works | `II` |
+| `stage_hotel_{lit,dim}.png` | III — Hotel Imperial | `III` |
 
-Glyphs, not illustrations: max 5 colours, 1 px `#0a0806` outline against
+These are compact numeral glyphs, not illustrations. They must share the same
+baseline, cap height, stroke weight, and spacing language so the three pips
+read as one set. Maximum 5 colours, with a 1 px `#0a0806` outline against
 transparency.
 
 ---
 
 ## Prompts — lit states
 
-Common preamble: *Tiny pixel art game HUD icon on a strict 8×8 pixel grid,
-every pixel a flat single colour, pure white background, no anti-aliasing,
-1-pixel dark outline #0a0806.*
+Common preamble: *Tiny pixel art Roman-numeral game HUD icon on a strict 8×8
+pixel grid, every pixel a flat single colour, pure white background, no
+anti-aliasing. Heavy carved Roman tally strokes matching a DOOM / Hexen
+status bar. Prioritize clearly separated vertical bars over decorative
+serifs.*
 
-**`stage_opera_lit` — theatre mask:**
-A 6×7 px tragedy half-mask, face-on. Fill `#c0a060`, two single-pixel eye
-holes `#0a0806` at y 2, a 2 px downturned mouth line `#7a5c2e` at y 5,
-one `#e8d8a8` catch-light pixel on the brow. Outline `#0a0806`.
+All numerals occupy rows 1–6. Row 0 and row 7 remain transparent. Vertical
+strokes are 2 px wide with transparent gaps between them. Do not connect the
+strokes at the top or bottom.
 
-**`stage_mill_lit` — factory with smokestack:**
-A 7×4 px factory block sitting on the baseline (y 4–7), fill `#c0a060`,
-roof line `#e8d8a8`. A 2 px wide smokestack rises from its left side to y 0
-in `#7a5c2e`, with one single smoke pixel `#806040` floating 1 px right of
-the stack top. Outline `#0a0806`.
+**`stage_opera_lit` — Roman numeral I:**
+One centred vertical gold stroke, x 3–4, y 1–6. Main fill `#c0a060`,
+lower/right edge `#7a5c2e`, one `#e8d8a8` catch-light pixel at the top.
 
-**`stage_hotel_lit` — imperial crown:**
-A 7×5 px crown sitting on the baseline: band of `#c0a060` (rows 5–6), three
-1 px points rising to y 1 (left, centre taller, right), a single `#cc1a1a`
-jewel pixel in the centre of the band, `#e8d8a8` catch-light on the centre
-point tip. Outline `#0a0806`.
+**`stage_mill_lit` — Roman numeral II:**
+Two narrow parallel gold `I` strokes at x 1–2 and x 5–6, y 1–6. Preserve
+2 px of transparent separation between the glyphs. Use `#c0a060` fill,
+`#7a5c2e` lower/right edge, and one shared `#e8d8a8` catch-light pixel on
+the upper-left.
+
+**`stage_hotel_lit` — Roman numeral III:**
+Three parallel gold `I` strokes at x 0–1, x 3–4, and x 6–7, y 1–6. The
+outside numerals may touch the canvas edge but must not merge with the centre
+numeral. Use `#c0a060` fill, `#7a5c2e` lower/right pixels, and one
+`#e8d8a8` catch-light pixel at the upper-left.
 
 ## Prompts — dim states
 
-Identical silhouettes, rendered as unlit slots: shape fill `#1a1a1a`,
-interior lines `#2a2a2a`, outline `#000000`, no gold, no red. They sit
-beside the gold lit versions and must clearly read "not yet conquered".
+Identical numeral shapes, alignment, and spacing, rendered as unlit carved
+slots: main strokes `#2a2a2a`, lower/right pixels `#1a1a1a`, outline
+`#000000`. No gold and no red. They must remain legible as I, II, and III
+while clearly reading "not yet conquered".
 
 ---
 
 ## Post-processing
 
-Generate each at **1024 × 1024** ("each logical pixel a flat 128×128
-block"), then:
+Generate the six icons as one **3 columns × 2 rows sprite sheet** at
+**1536 × 1024**. Top row: `I lit`, `II lit`, `III lit`. Bottom row:
+`I dim`, `II dim`, `III dim`. Each cell has a pure `#ffffff` background,
+wide gutters, and one centred enlarged 8×8 logical icon.
+
+Save the untouched generated sheet as:
 
 ```sh
-magick raw.png -filter point -resize 8x8\! assets/ui/stage_opera_lit.png
+source-assets/ui/stage-pips.png
 ```
+
+Crop each cell, key the white background to alpha, then resize with a point /
+nearest-neighbour filter to the six runtime files. For example:
+
+```sh
+magick cell.png -transparent white -filter point -resize 8x8\! \
+  assets/ui/stage_opera_lit.png
+```
+
+Verify all six at 8×8 and at 3× nearest-neighbour zoom. The three numeral
+counts must be immediately distinguishable.

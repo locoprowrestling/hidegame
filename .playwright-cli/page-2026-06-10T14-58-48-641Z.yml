@@ -1,0 +1,3 @@
+- paragraph [ref=e3]:
+  - link "manual" [ref=e4] [cursor=pointer]:
+    - /url: manual.html
