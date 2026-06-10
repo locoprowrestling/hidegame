@@ -173,11 +173,11 @@ function drawHUD(ctx, gs) {
     ctx.fillRect(0, 0, CANVAS_W, 20);
   }
 
-  // Floor name — left
+  // Floor name — left (x=20 clears corner ornament, matching overworld margin)
   ctx.fillStyle = '#806040';
   ctx.font = '10px "VT323", monospace';
   ctx.textAlign = 'left';
-  ctx.fillText(FLOORS[floorIdx].name.toUpperCase(), 4, 14);
+  ctx.fillText(FLOORS[floorIdx].name.toUpperCase(), 20, 14);
 
   // Per-floor program pips — center
   var pipTotal = ROUNDS[gs.currentRound].programsPerFloor;
@@ -196,11 +196,11 @@ function drawHUD(ctx, gs) {
     }
   }
 
-  // Global count — right
+  // Global count — right (x=CANVAS_W-20 clears corner ornament, matching overworld margin)
   ctx.fillStyle = '#806040';
   ctx.font = '10px "VT323", monospace';
   ctx.textAlign = 'right';
-  ctx.fillText(allDone + '/' + totalPrograms(), CANVAS_W - 4, 14);
+  ctx.fillText(allDone + '/' + totalPrograms(), CANVAS_W - 20, 14);
 
   // Stress bar — thin strip under the top bar (the topbar art bakes in the groove)
   var sFrac = gs.stress / STRESS_MAX;
@@ -234,21 +234,21 @@ function drawHUD(ctx, gs) {
   if (gs.gm.state === 'chase' && onSameFloor) {
     if (flash) {
       ctx.fillStyle = '#ff2200';
-      ctx.fillText('RUN', CANVAS_W - 4, 13);
+      ctx.fillText('RUN', CANVAS_W - 20, 13);
       var eyeO = SPRITE_TEXTURES['ui-eye-open'];
       if (eyeO) ctx.drawImage(eyeO.canvas,
-        CANVAS_W - 4 - Math.ceil(ctx.measureText('RUN').width) - 14, 2, 11, 11);
+        CANVAS_W - 20 - Math.ceil(ctx.measureText('RUN').width) - 14, 2, 11, 11);
     }
   } else if (onSameFloor && gmDist < 6) {
     var danger = Math.max(0, 1 - (gmDist - 1) / 5);
     if (flash && danger > 0.2) {
       ctx.fillStyle = 'rgba(200,80,0,' + danger.toFixed(2) + ')';
-      ctx.fillText("DON'T LOOK", CANVAS_W - 4, 13);
+      ctx.fillText("DON'T LOOK", CANVAS_W - 20, 13);
       var eyeS = SPRITE_TEXTURES['ui-eye-shut'];
       if (eyeS) {
         ctx.globalAlpha = danger;
         ctx.drawImage(eyeS.canvas,
-          CANVAS_W - 4 - Math.ceil(ctx.measureText("DON'T LOOK").width) - 14, 2, 11, 11);
+          CANVAS_W - 20 - Math.ceil(ctx.measureText("DON'T LOOK").width) - 14, 2, 11, 11);
         ctx.globalAlpha = 1.0;
       }
     }
