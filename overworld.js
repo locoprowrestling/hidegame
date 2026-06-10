@@ -191,9 +191,6 @@ function drawDoorIndicators(ctx, player, gs) {
       ctx.drawImage(arrowSpr.canvas,
         screenX - (aw >> 1), Math.round(screenY) - (aw >> 1), aw, aw);
     } else {
-      ctx.globalAlpha = alpha * pulse * 0.35;
-      ctx.fillStyle = lk ? '#552222' : '#aa7700';
-      _fillArrow(ctx, screenX, screenY, size * 1.65, false);
       ctx.globalAlpha = alpha * pulse;
       ctx.fillStyle = lk ? '#aa4444' : '#ffd966';
       _fillArrow(ctx, screenX, screenY, size, false);
@@ -215,24 +212,27 @@ function drawOverworldHUD(ctx, gs) {
   ctx.fillStyle = '#806040';
   ctx.font = '10px "VT323", monospace';
   ctx.textAlign = 'left';
-  ctx.fillText('LONGMONT — NIGHT', 4, 14);
+  ctx.fillText('LONGMONT — NIGHT', 20, 14);
 
-  // Stage completion pips — right
+  // Stage completion pips — right, shifted to clear corner ornament
   var done = [r1Complete(), r2Complete(), _isComplete(ROUNDS[2].completionKey)];
   var stageNames = ['opera', 'mill', 'hotel'];
-  ctx.textAlign = 'right';
-  for (var i = 2; i >= 0; i--) {
-    var px = CANVAS_W - 12 - (2 - i) * 11;
+  var stageLabels = ['I', 'II', 'III'];
+  var pipBase = CANVAS_W - 50; // left edge of first (opera) pip; rightmost ends at CANVAS_W-20
+  for (var i = 0; i < 3; i++) {
+    var px = pipBase + i * 11;
     var spr = SPRITE_TEXTURES['ui-stage-' + stageNames[i] + '-' + (done[i] ? 'lit' : 'dim')];
     if (spr) {
       ctx.drawImage(spr.canvas, px, 6, 8, 8);
     } else {
-      ctx.fillStyle = done[i] ? '#c0a060' : '#2a2a2a';
-      ctx.fillRect(px, 7, 8, 7);
+      ctx.fillStyle = done[i] ? '#c0a060' : '#444438';
+      ctx.textAlign = 'center';
+      ctx.fillText(stageLabels[i], px + 4, 14);
     }
   }
   ctx.fillStyle = '#555548';
-  ctx.fillText('STAGES', CANVAS_W - 46, 14);
+  ctx.textAlign = 'right';
+  ctx.fillText('STAGES', pipBase - 4, 14);
 
   // Bottom bar
   var botbar = SPRITE_TEXTURES['ui-bottombar'];
