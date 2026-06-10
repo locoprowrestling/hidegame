@@ -4,6 +4,7 @@ html, body {
   background: #000;
   width: 100%; height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
@@ -19,6 +20,20 @@ body {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   cursor: crosshair;
+}
+
+#manualLink {
+  margin-top: 6px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+}
+#manualLink a {
+  color: #5a4a28;
+  text-decoration: none;
+}
+#manualLink a:hover {
+  color: #c0a060;
 }
 
 #mobileBlock {
