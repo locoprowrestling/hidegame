@@ -187,6 +187,9 @@ All Codex image generation prompts live in `prompts/`. Three subfolders:
 
 **Workflow note:** When asking Codex to "generate images", use `imagegen` directly.
 Do not replace that request with a local procedural generator unless explicitly asked.
+Keep untouched high-resolution generated artwork under `source-assets/`, mirroring
+the final runtime filename and category. Processed engine-ready images stay under
+`assets/`; runtime code must not load files from `source-assets/`.
 
 ### `prompts/textures/` — wall/floor/ceiling tiles
 
@@ -323,3 +326,11 @@ pattern lives in this overhaul's history — re-run it after any map edit.
   stars in the overworld sky.
 - Verified in browser: facades, doors, lobby, foyer portrait decal, mill grade
   all render; no console errors.
+
+### High-resolution source archive
+
+- Added `source-assets/` for generated masters that are not loaded by the game.
+- Archived the current overworld ground, door, upper-storey, and decal masters,
+  plus the existing full-resolution program and punch-card artwork.
+- Superseded Hotel door and poster generations are retained under
+  `source-assets/variants/`; corrected generations are the canonical filenames.

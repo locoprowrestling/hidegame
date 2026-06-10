@@ -43,23 +43,40 @@ audio.js → renderer.js → game.js
 - `MAP_W` / `MAP_H` — dynamic; set by `switchToFloor` (overworld is 38×28, buildings vary).
 - `ROUNDS[]` — round definitions live in `map.js`; R3 is pushed by `map_r3.js`.
 
+**Screen flow**: Title → `SCREEN_OVERWORLD` (Enter) → `SCREEN_PLAY` (approach door + Space). Win/gameover → R returns to overworld outside the building you left. `SCREEN_ROUND_SELECT` and `drawRoundSelect` exist in the code but are vestigial — the overworld serves as the round select.
+
 **Raycaster** (`raycaster.js`): DDA engine renders into a fixed 320×200 offscreen canvas, then blits with `ctx.drawImage()`. `putImageData` ignores DPR transforms — do not call it on the main `ctx` directly.
 
-**GM AI** (`ai.js`): State machine — `patrol → chase → search → to_stairs`. Extra states: `ambush` (lurks at an uncollected item), `camp` (waits at the stairwell after a floor change), `hunt` (stress ≥65: BFS toward player without LOS). Chase triggers only when the player looks directly at the GM (dot product > 0.78) AND line-of-sight is clear — proximity alone does not trigger.
+**GM AI** (`ai.js`): State machine with six states. `updateGM(gm, player, playerFloor, dt, stress)` — the `stress` parameter drives hunt mode.
 
-**Stress system** (`constants.js` + `game.js`): `gs.stress` 0–100. Rises near the GM, fast during chase, bumps from scare events. Affects: vignette (≥18), shake (≥45), heartbeat audio (≥55), GM hunt mode (≥65). Carried across building exits capped at 30.
+| State | Trigger | Behaviour |
+| ----- | ------- | --------- |
+| `patrol` | default | BFS between waypoints; on arrival may branch to `ambush` |
+| `chase` | player looks at GM + LOS clear | Direct pursuit; exits to `search` after 4 s without LOS |
+| `search` | lost chase | BFS to last-known position, then back to `patrol` |
+| `to_stairs` | floor-change timer | BFS to stairwell, then teleports to that tile on next floor |
+| `ambush` | 40% on waypoint arrival | BFS to an uncollected item; lurks 9 s |
+| `camp` | 30% after floor change | Stands at the stairwell 6 s |
+| `hunt` | `stress ≥ 65` | BFS toward player with no LOS needed; repath every 2.6 s; exits at stress < 50 |
 
-**Overworld** (`overworld.js`): Separate map/stalker — GM appears at distance, vanishes on approach or stare. Cannot catch the player outdoors. Building doors locked until prior round completed (localStorage).
+`_gmTryStartChase` (called from every non-chase state) is the single entry point for the look-trigger: fires only when `_playerLooksAtGM` (dot product > 0.78) AND `_gmHasSight` (ray clear) are both true.
 
-**Escalation** (`ai.js` + `constants.js`): As `totalCollected() / totalPrograms()` rises, GM speed scales toward `GM_ESCALATE_SPEED` (×1.55) and floor-change cadence toward `GM_ESCALATE_CADENCE` (×0.45 of the base timer).
+**Stress system** (`constants.js` + `game.js`): `gs.stress` 0–100. Rises near the GM (≤7 tiles, distance-scaled), fast during chase, bumps from scare events and overworld stalker sightings. Decays slowly otherwise. Affects: vignette pulse (≥18), screen shake (≥45), WebAudio heartbeat (≥55), GM hunt mode (≥65). Carried across building exits capped at 30; starts at 18 on entering a building.
+
+**Scare events** (`game.js` `_updateScares`): Fire every 22–46 s in buildings. Three types: darkness flicker, whisper text mid-screen, or fake-GM silhouette 6–11 tiles ahead for ~0.5 s.
+
+**Overworld** (`overworld.js`): Stalker GM (`floor: -1` = hidden, `floor: 0` = visible) spawns at a distance every 9–19 s, vanishes when within 5.5 tiles, stared at >1.3 s, or after 9 s — with flicker, whisper, and stress bump. Cannot catch the player outdoors.
+
+**Escalation** (`ai.js` + `constants.js`): As `totalCollected() / totalPrograms()` rises 0→1, GM speed scales toward `GM_ESCALATE_SPEED` (×1.55) and floor-change interval toward `GM_ESCALATE_CADENCE` (×0.45 of the base timer).
 
 **Textures / decals**: Flat-colour fallback if PNG assets absent. `textures.js` loads PNGs into `WALL_TEXTURES`, `FLOOR_TEXTURES`, `CEIL_TEXTURES`, `SPRITE_TEXTURES`. `decals.js` alpha-composites posters/signs onto wall faces (hand-placed overworld billboards + deterministic hash-based auto-scatter in buildings).
 
 **Rendering pipeline per frame** (`game.js` loop):
 1. `castAndDraw` — walls, floor, ceiling with light grading + fake building storeys (overworld)
 2. `drawSprites` — collectibles, GM, fake-GM scare glimpse (z-sorted, zBuffer-clipped)
-3. `drawStairIndicators`, `drawVignette`, `drawPickupFlash`, `drawLuckyFlash`
-4. `drawHUD`, `drawMinimap`
+3. In overworld: `drawDoorIndicators`; in building: `drawStairIndicators`
+4. `drawVignette`, `drawPickupFlash`, `drawLuckyFlash`
+5. `drawHUD`, `drawMinimap`
 
 ## Map editing
 
@@ -82,8 +99,10 @@ All numeric knobs are in `constants.js`. Key ones for difficulty:
 | `GM_FLOOR_CHANGE_MS` | How often GM changes floors (lower = more pressure) |
 | `GM_FOLLOW_PROB` | Probability GM moves toward player's floor |
 | `GM_ESCALATE_SPEED` / `GM_ESCALATE_CADENCE` | End-game speed/cadence multipliers |
-| `STRESS_HUNT_THRESHOLD` | Stress level that triggers hunt mode |
+| `STRESS_HUNT_THRESHOLD` | Stress level that triggers hunt mode (hysteresis exits at −15) |
 | `GM_AMBUSH_PROB` / `GM_STAIR_CAMP_PROB` | Ambush/camp chance on arrival |
+
+**Not in constants**: The lucky-warp probability (catch escape) is hardcoded at 4% in `game.js` inside the `gmCaughtPlayer` check. The map overlay is limited to 3 uses per run (`gs.mapUsesLeft`), held Tab to display.
 
 ## Asset generation
 
