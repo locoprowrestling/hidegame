@@ -215,7 +215,7 @@ function castAndDraw(ctx, player, gs) {
         var dd = decLk[mapCol + ',' + mapRow + ',' + face];
         if (dd) {
           var dt = DECAL_TEXTURES[dd.tex];
-          var fx = flipped ? wallX : 1 - wallX;
+          var fx = 1 - wallX;
           if (dt && fx >= DECAL_X0 && fx <= DECAL_X1) {
             dec = dt;
             decColX = Math.min(dt.w - 1,
