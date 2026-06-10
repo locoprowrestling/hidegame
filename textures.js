@@ -7,7 +7,7 @@ var SPRITE_TEXTURES = {};  // keyed by name; stored as {canvas, w, h} for drawIm
 var _texLoadCount = 0;
 var _texLoadTotal = 87;  // 5 R1 + 5 R2 + 5 R3 + 4 OW walls + 3 doors + 4 upper + 16 decals + OW ground + (4+8+10) floors + (4+8+10) ceilings
 
-function _loadTex(src, cb) {
+function _loadTex(src, cb, removeBg) {
   var img = new Image();
   img.onload = function() {
     var c = document.createElement('canvas');
@@ -15,6 +15,36 @@ function _loadTex(src, cb) {
     var cx = c.getContext('2d');
     cx.drawImage(img, 0, 0);
     var id = cx.getImageData(0, 0, img.width, img.height);
+    if (removeBg) {
+      var d = id.data, w = c.width, h = c.height;
+      var visited = new Uint8Array(w * h);
+      var queue = [];
+      function nearWhite(p) {
+        var i = p * 4, r = d[i], g = d[i+1], b = d[i+2];
+        var mx = r > g ? (r > b ? r : b) : (g > b ? g : b);
+        var mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
+        return (mx - mn) < 50 && (r + g + b) > 450;
+      }
+      for (var bx = 0; bx < w; bx++) {
+        for (var by = 0; by < h; by += (bx === 0 || bx === w - 1) ? 1 : h - 1) {
+          var bp = by * w + bx;
+          if (!visited[bp] && nearWhite(bp)) { visited[bp] = 1; queue.push(bp); }
+        }
+      }
+      while (queue.length) {
+        var p = queue.pop();
+        d[p * 4 + 3] = 0;
+        var px = p % w, py = (p / w) | 0;
+        var ns = [];
+        if (px > 0)     ns.push(p - 1);
+        if (px < w - 1) ns.push(p + 1);
+        if (py > 0)     ns.push(p - w);
+        if (py < h - 1) ns.push(p + w);
+        for (var n = 0; n < ns.length; n++) {
+          if (!visited[ns[n]] && nearWhite(ns[n])) { visited[ns[n]] = 1; queue.push(ns[n]); }
+        }
+      }
+    }
     cb({ data: id.data, w: img.width, h: img.height });
     if (++_texLoadCount >= _texLoadTotal) _texLoadCount = _texLoadTotal;
   };
@@ -123,7 +153,7 @@ function loadTextures() {
     'ow_billboard_a', 'ow_billboard_b', 'ow_hotel_plaque', 'ow_mill_notice',
   ];
   _decalNames.forEach(function(name) {
-    _loadTex('assets/decals/' + name + '.png', function(t) { DECAL_TEXTURES[name] = t; });
+    _loadTex('assets/decals/' + name + '.png', function(t) { DECAL_TEXTURES[name] = t; }, true);
   });
   // Round 1 floors + ceilings
   _loadTex('assets/textures/floor_foyer.png',        function(t) { FLOOR_TEXTURES[0] = t; });
