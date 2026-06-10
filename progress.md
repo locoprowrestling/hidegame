@@ -279,6 +279,23 @@ pattern lives in this overhaul's history — re-run it after any map edit.
 
 ---
 
+## Rendering resolution fix (2026-06-10)
+
+The canvas backing store was `320×200 × devicePixelRatio` but displayed at
+960×600 CSS — the browser upscaled it, so HUD text, sprites, decals and the map
+rasterized small and blurry/blocky. Fixed in `game.js` `_sizeCanvas()`: backing
+store now matches displayed physical pixels (`native × cssScale × DPR`, the
+raycast offscreen still 320×200, upscaled nearest-neighbour in-canvas), and the
+CSS scale adapts to the window — largest integer multiple of 320×200 that fits,
+clamped 1×–6×, recomputed on resize, with space reserved for the manual link.
+Walls stay chunky; text and sprites render at full output resolution.
+
+**Lesson:** with a DPR transform, `canvas.width` must track the *displayed*
+size, not just the native resolution — anything vector-drawn rasterizes at
+backing-store resolution.
+
+---
+
 ## Known issues / future work
 
 - Hotel Imperial (R3) and overworld render with flat-colour walls — no textures

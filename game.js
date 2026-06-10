@@ -303,13 +303,30 @@ function _changeFloor(toFloor) {
 
 // ── Main loop ─────────────────────────────────────────────────────────────────
 var ctx = canvas.getContext('2d');
-var DPR = window.devicePixelRatio || 1;
-canvas.width  = Math.round(CANVAS_W * DPR);
-canvas.height = Math.round(CANVAS_H * DPR);
-canvas.style.width  = (CANVAS_W * CSS_SCALE) + 'px';
-canvas.style.height = (CANVAS_H * CSS_SCALE) + 'px';
-ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-ctx.imageSmoothingEnabled = false;
+
+// The 3D scene is always raycast at 320×200 (the retro look), but the canvas
+// backing store must match the DISPLAYED physical pixels — otherwise the HUD,
+// sprites, decals and map rasterize small and the browser blurs/blocks them up.
+// Backing = native × cssScale × devicePixelRatio. The raycast offscreen is
+// upscaled nearest-neighbour inside the canvas, so walls stay crisply chunky
+// while text and sprites render at full output resolution.
+function _sizeCanvas() {
+  var dpr = window.devicePixelRatio || 1;
+  // Leave room for the fixed manual link, then use the largest integer scale
+  // that fits. Small desktop windows can fall back to native 1×.
+  var availableHeight = Math.max(CANVAS_H, window.innerHeight - 48);
+  var fit = Math.min(window.innerWidth / CANVAS_W, availableHeight / CANVAS_H);
+  var cssScale = Math.max(1, Math.min(6, Math.floor(fit)));
+  var renderScale = cssScale * dpr;
+  canvas.width  = Math.round(CANVAS_W * renderScale);
+  canvas.height = Math.round(CANVAS_H * renderScale);
+  canvas.style.width  = (CANVAS_W * cssScale) + 'px';
+  canvas.style.height = (CANVAS_H * cssScale) + 'px';
+  ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+  ctx.imageSmoothingEnabled = false; // nearest-neighbour for the raycast blit
+}
+_sizeCanvas();
+window.addEventListener('resize', _sizeCanvas);
 
 var _lastTime = 0;
 
