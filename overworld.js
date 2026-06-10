@@ -56,7 +56,7 @@ var OVERWORLD_FLOORS = [
 
 // Building doors — stand here and press Space.
 var OW_DOORS = [
-  { x: 14.5, y:  6.5, round: 0, name: 'DICKENS OPERA HOUSE', locked: function() { return false; },
+  { x: 14.5, y:  6.5, round: 0, name: 'THE OPERA HOUSE', locked: function() { return false; },
     lockMsg: '' },
   { x: 23.5, y: 21.5, round: 1, name: 'THE SUGAR MILL', locked: function() { return !r1Complete(); },
     lockMsg: 'CHAINED — SURVIVE THE OPERA HOUSE FIRST' },
