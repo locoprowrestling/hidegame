@@ -2,6 +2,8 @@
 
 This folder stores original high-resolution generated artwork.
 
+- See [`docs/asset-production.md`](../docs/asset-production.md) for the full
+  generation, processing, verification, and run-note workflow.
 - Files here are production sources, not runtime game assets.
 - Game-ready files belong under `assets/` and use the dimensions and formats
   defined in their prompt style guides.
@@ -17,4 +19,4 @@ This folder stores original high-resolution generated artwork.
 2. Resize, palette-limit, and remove backgrounds as required.
 3. Save the processed game asset under the corresponding `assets/` path.
 4. Verify the runtime file dimensions, color mode, and alpha requirements.
-
+5. Record reusable outcomes under `docs/asset-runs/`.

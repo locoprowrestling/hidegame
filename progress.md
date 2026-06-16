@@ -189,7 +189,9 @@ All Codex image generation prompts live in `prompts/`. Three subfolders:
 Do not replace that request with a local procedural generator unless explicitly asked.
 Keep untouched high-resolution generated artwork under `source-assets/`, mirroring
 the final runtime filename and category. Processed engine-ready images stay under
-`assets/`; runtime code must not load files from `source-assets/`.
+`assets/`; runtime code must not load files from `source-assets/`. The complete
+workflow, verification checklist, templates, and batch examples are maintained in
+`docs/asset-production.md` and `docs/asset-runs/`.
 
 ### `prompts/textures/` — wall/floor/ceiling tiles
 
